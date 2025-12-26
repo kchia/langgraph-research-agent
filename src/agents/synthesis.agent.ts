@@ -1,5 +1,4 @@
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
-import { ChatAnthropic } from "@langchain/anthropic";
 import { AIMessage } from "@langchain/core/messages";
 import type { ResearchState } from "../graph/state.js";
 import { MAX_RESEARCH_ATTEMPTS } from "../utils/constants.js";
@@ -8,6 +7,7 @@ import {
   buildSynthesisUserPrompt
 } from "../prompts/synthesis.prompts.js";
 import { Logger } from "../utils/logger.js";
+import { getLLM } from "../utils/llm-factory.js";
 
 const logger = new Logger("synthesis-agent");
 
@@ -15,12 +15,7 @@ const logger = new Logger("synthesis-agent");
  * Factory function to create Synthesis Agent with injectable LLM.
  */
 export function createSynthesisAgent(llm?: BaseChatModel) {
-  const model =
-    llm ??
-    new ChatAnthropic({
-      model: "claude-sonnet-4-20250514",
-      anthropicApiKey: process.env.ANTHROPIC_API_KEY
-    });
+  const model = getLLM("synthesis", llm);
 
   return async function synthesisAgent(
     state: ResearchState

@@ -9,6 +9,7 @@ import {
   buildClarityUserPrompt
 } from "../prompts/clarity.prompts.js";
 import { Logger } from "../utils/logger.js";
+import { getLLM } from "../utils/llm-factory.js";
 
 const logger = new Logger("clarity-agent");
 
@@ -77,12 +78,7 @@ function normalizeCompanyName(company: string | null): string | null {
  * Factory function to create Clarity Agent with injectable LLM.
  */
 export function createClarityAgent(llm?: BaseChatModel) {
-  const model =
-    llm ??
-    new ChatAnthropic({
-      model: "claude-sonnet-4-20250514",
-      anthropicApiKey: process.env.ANTHROPIC_API_KEY
-    });
+  const model = getLLM("clarity", llm);
   // Type assertion needed because BaseChatModel is a union type and TypeScript
   // cannot determine which withStructuredOutput signature to use
   const structuredModel = (model as ChatAnthropic).withStructuredOutput(
