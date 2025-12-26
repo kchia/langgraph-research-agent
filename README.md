@@ -29,7 +29,9 @@ npm start
 - **Timeout protection** - Configurable timeouts prevent hanging operations
 - **Input validation** - Validates and sanitizes user queries
 - **Message summarization** - Automatically summarizes long conversation history
-- **Token budget management** - Prevents token limit errors across all agents
+- **Token budget management** - Accurate tiktoken-based token counting across all agents
+- **Circuit breaker** - Prevents cascade failures when external APIs are unavailable
+- **Resilient retry logic** - Battle-tested retry with jitter via p-retry
 
 ## Configuration
 
