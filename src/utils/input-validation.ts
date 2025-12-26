@@ -1,14 +1,12 @@
 /**
  * Input validation utilities for user queries.
  *
- * Validates user input before graph execution to prevent
- * invalid queries from causing downstream errors.
+ * Uses Zod for schema validation, consistent with agent structured output patterns.
+ * Validates user input before graph execution to prevent invalid queries
+ * from causing downstream errors.
  */
 
-export interface ValidationResult {
-  valid: boolean;
-  error?: string;
-}
+import { z } from "zod";
 
 /**
  * Maximum allowed query length (characters).
@@ -23,47 +21,55 @@ const MAX_QUERY_LENGTH = 5000;
 const MIN_QUERY_LENGTH = 1;
 
 /**
+ * Zod schema for query validation.
+ * Validates type, length, and content constraints.
+ */
+export const QuerySchema = z
+  .string({
+    required_error: "Query is required",
+    invalid_type_error: "Query must be a string"
+  })
+  .transform((s) => s.trim())
+  .refine((s) => s.length >= MIN_QUERY_LENGTH, {
+    message: "Query cannot be empty or only whitespace"
+  })
+  .refine((s) => s.length <= MAX_QUERY_LENGTH, {
+    message: `Query is too long. Maximum length is ${MAX_QUERY_LENGTH} characters.`
+  })
+  .refine((s) => !s.includes("\0"), {
+    message: "Query contains invalid characters (null bytes)"
+  });
+
+/**
+ * Type for validated query (inferred from schema).
+ */
+export type ValidatedQuery = z.infer<typeof QuerySchema>;
+
+/**
+ * Validation result interface for backward compatibility.
+ */
+export interface ValidationResult {
+  valid: boolean;
+  error?: string;
+}
+
+/**
  * Validate a user query input.
+ * Returns a result object with valid flag and optional error message.
  *
  * @param query - The user's query string
  * @returns Validation result with valid flag and optional error message
  */
 export function validateQuery(query: unknown): ValidationResult {
-  // Check if query is a string
-  if (typeof query !== "string") {
-    return {
-      valid: false,
-      error: `Query must be a string, got ${typeof query}`
-    };
+  const result = QuerySchema.safeParse(query);
+
+  if (result.success) {
+    return { valid: true };
   }
 
-  const trimmed = query.trim();
-
-  // Check if query is empty after trimming
-  if (trimmed.length < MIN_QUERY_LENGTH) {
-    return {
-      valid: false,
-      error: "Query cannot be empty or only whitespace"
-    };
-  }
-
-  // Check if query is too long
-  if (trimmed.length > MAX_QUERY_LENGTH) {
-    return {
-      valid: false,
-      error: `Query is too long (${trimmed.length} characters). Maximum length is ${MAX_QUERY_LENGTH} characters.`
-    };
-  }
-
-  // Check for potentially problematic characters (null bytes, etc.)
-  if (trimmed.includes("\0")) {
-    return {
-      valid: false,
-      error: "Query contains invalid characters (null bytes)"
-    };
-  }
-
-  return { valid: true };
+  // Extract the first error message
+  const error = result.error.errors[0]?.message ?? "Unknown validation error";
+  return { valid: false, error };
 }
 
 /**
@@ -75,13 +81,12 @@ export function validateQuery(query: unknown): ValidationResult {
  * @throws Error if query is invalid
  */
 export function validateAndNormalizeQuery(query: unknown): string {
-  const validation = validateQuery(query);
+  const result = QuerySchema.safeParse(query);
 
-  if (!validation.valid) {
-    throw new Error(
-      `Invalid query: ${validation.error ?? "Unknown validation error"}`
-    );
+  if (result.success) {
+    return result.data;
   }
 
-  return (query as string).trim();
+  const error = result.error.errors[0]?.message ?? "Unknown validation error";
+  throw new Error(`Invalid query: ${error}`);
 }
