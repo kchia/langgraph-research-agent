@@ -6,6 +6,14 @@ export default defineConfig({
     environment: "node",
     include: ["tests/**/*.test.ts"],
     setupFiles: ["dotenv/config"],
-    testTimeout: 30000 // LLM calls can be slow
+    testTimeout: 60000, // LLM calls can be slow, especially with multiple tests
+    fileParallelism: false, // Run test files sequentially to avoid API rate limits
+    pool: "threads",
+    poolOptions: {
+      threads: {
+        singleThread: false,
+        maxThreads: 1 // Run tests sequentially within files too
+      }
+    }
   }
 });
