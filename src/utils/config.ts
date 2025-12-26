@@ -30,4 +30,17 @@ export function validateConfig(config: AppConfig): void {
   if (config.dataSource === "tavily" && !config.tavilyApiKey) {
     throw new Error("TAVILY_API_KEY required when RESEARCH_DATA_SOURCE=tavily");
   }
+
+  if (config.langsmithEnabled) {
+    if (!process.env.LANGCHAIN_API_KEY) {
+      console.warn(
+        "Warning: LANGCHAIN_TRACING_V2=true but LANGCHAIN_API_KEY not set"
+      );
+    } else {
+      console.log(
+        "LangSmith tracing enabled for project:",
+        process.env.LANGCHAIN_PROJECT ?? "default"
+      );
+    }
+  }
 }

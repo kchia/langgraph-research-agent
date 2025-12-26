@@ -32,7 +32,7 @@ describe("Happy Path Integration", () => {
       expect(result.detectedCompany).toMatch(/apple/i);
       expect(result.finalSummary).toBeDefined();
       expect(result.finalSummary!.length).toBeGreaterThan(50);
-    }, 30000);
+    }, 60000);
 
     it("should complete research for Tesla", async () => {
       const config = { configurable: { thread_id: crypto.randomUUID() } };
