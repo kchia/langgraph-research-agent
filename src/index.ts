@@ -98,7 +98,11 @@ async function main() {
         }
       } catch (error) {
         logger.error("Graph execution failed", { error: String(error) });
-        console.log("\nAn error occurred. Please try again.\n");
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+        console.log(
+          `\n❌ An error occurred: ${errorMessage}\nPlease try again or type 'quit' to exit.\n`
+        );
       }
     }
   } finally {
