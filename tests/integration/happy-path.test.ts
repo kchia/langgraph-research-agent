@@ -47,7 +47,7 @@ describe("Happy Path Integration", () => {
 
       expect(result.detectedCompany).toMatch(/tesla/i);
       expect(result.finalSummary).toBeDefined();
-    }, 30000);
+    }, 60000);
   });
 
   describe("with mock data (no API key needed)", () => {
