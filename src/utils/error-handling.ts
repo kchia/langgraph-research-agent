@@ -1,5 +1,4 @@
-import type { ResearchState } from "../graph/state.js";
-import type { ErrorContext } from "../agents/error-recovery.agent.js";
+import type { ResearchState, ErrorContext } from "../graph/state.js";
 import { Logger } from "./logger.js";
 
 const logger = new Logger("error-handling");

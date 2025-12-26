@@ -1,20 +1,6 @@
 import { AIMessage } from "@langchain/core/messages";
-import type { ResearchState } from "../graph/state.js";
+import type { ResearchState, ErrorContext } from "../graph/state.js";
 import { Logger, createLoggerWithCorrelationId } from "../utils/logger.js";
-
-/**
- * Error context information for error recovery.
- */
-export interface ErrorContext {
-  /** Name of the node that failed */
-  failedNode: string;
-  /** Error message */
-  errorMessage: string;
-  /** Whether the error is retryable */
-  isRetryable: boolean;
-  /** Original error for logging */
-  originalError?: unknown;
-}
 
 /**
  * Error recovery agent that handles errors gracefully.

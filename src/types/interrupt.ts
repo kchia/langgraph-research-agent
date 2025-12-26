@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 /**
  * Type definitions for interrupt payloads and responses.
  *
@@ -6,19 +8,35 @@
  */
 
 /**
+ * Zod schema for clarification interrupt payload.
+ */
+export const ClarificationInterruptPayloadSchema = z.object({
+  type: z.literal("clarification_needed"),
+  question: z.string(),
+  originalQuery: z.string(),
+  attempt: z.number().int().nonnegative()
+});
+
+/**
  * Payload sent when graph interrupts for clarification.
  */
-export interface ClarificationInterruptPayload {
-  type: "clarification_needed";
-  question: string;
-  originalQuery: string;
-  attempt: number;
-}
+export type ClarificationInterruptPayload = z.infer<
+  typeof ClarificationInterruptPayloadSchema
+>;
+
+/**
+ * Zod schema for clarification responses.
+ * Validates that the response is a non-empty string.
+ */
+export const ClarificationResponseSchema = z
+  .string()
+  .min(1, "Clarification response cannot be empty")
+  .transform((s) => s.trim());
 
 /**
  * Valid response types for clarification interrupt.
  */
-export type ClarificationResponse = string;
+export type ClarificationResponse = z.infer<typeof ClarificationResponseSchema>;
 
 /**
  * Type guard for clarification responses.
@@ -30,7 +48,7 @@ export type ClarificationResponse = string;
 export function isClarificationResponse(
   value: unknown
 ): value is ClarificationResponse {
-  return typeof value === "string" && value.trim().length > 0;
+  return ClarificationResponseSchema.safeParse(value).success;
 }
 
 /**
@@ -42,24 +60,33 @@ export function isClarificationResponse(
  * @throws Error if response is not a valid non-empty string
  */
 export function validateClarificationResponse(value: unknown): string {
-  if (!isClarificationResponse(value)) {
+  const result = ClarificationResponseSchema.safeParse(value);
+  if (!result.success) {
     throw new Error(
-      `Invalid clarification response: expected non-empty string, got ${typeof value}`
+      `Invalid clarification response: ${result.error.errors
+        .map((e) => e.message)
+        .join(", ")}`
     );
   }
-  return value.trim();
+  return result.data;
 }
+
+/**
+ * Zod schema for interrupt data returned from graph state.
+ * Matches the structure of ClarificationInterruptPayload but allows any string type.
+ */
+export const InterruptDataSchema = z.object({
+  type: z.string(),
+  question: z.string(),
+  originalQuery: z.string(),
+  attempt: z.number().int().nonnegative()
+});
 
 /**
  * Type for interrupt data returned from graph state.
  * Matches the structure of ClarificationInterruptPayload.
  */
-export interface InterruptData {
-  type: string;
-  question: string;
-  originalQuery: string;
-  attempt: number;
-}
+export type InterruptData = z.infer<typeof InterruptDataSchema>;
 
 /**
  * Type guard to check if a value is valid interrupt data.
@@ -68,19 +95,7 @@ export interface InterruptData {
  * @returns True if value is valid interrupt data
  */
 export function isInterruptData(value: unknown): value is InterruptData {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const data = value as Record<string, unknown>;
-
-  return (
-    typeof data.type === "string" &&
-    typeof data.question === "string" &&
-    typeof data.originalQuery === "string" &&
-    typeof data.attempt === "number" &&
-    data.attempt >= 0
-  );
+  return InterruptDataSchema.safeParse(value).success;
 }
 
 /**
@@ -91,14 +106,9 @@ export function isInterruptData(value: unknown): value is InterruptData {
  * @returns Validated interrupt data or null if invalid
  */
 export function validateInterruptData(value: unknown): InterruptData | null {
-  if (!isInterruptData(value)) {
+  const result = InterruptDataSchema.safeParse(value);
+  if (!result.success) {
     return null;
   }
-
-  return {
-    type: value.type,
-    question: value.question,
-    originalQuery: value.originalQuery,
-    attempt: value.attempt
-  };
+  return result.data;
 }

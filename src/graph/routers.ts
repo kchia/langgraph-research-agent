@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { ResearchState } from "./state.js";
 import {
   CONFIDENCE_THRESHOLD,
@@ -6,6 +7,40 @@ import {
 import { Logger } from "../utils/logger.js";
 
 const logger = new Logger("routers");
+
+/**
+ * Zod schema for validating confidence score.
+ */
+const ConfidenceScoreSchema = z.number().finite().min(0).max(10);
+
+/**
+ * Zod schema for validating research attempts.
+ */
+const ResearchAttemptsSchema = z.number().int().nonnegative();
+
+/**
+ * Validate confidence score using Zod.
+ * Returns the validated score or null if invalid.
+ */
+function validateConfidenceScore(score: unknown): number | null {
+  const result = ConfidenceScoreSchema.safeParse(score);
+  if (!result.success) {
+    return null;
+  }
+  return result.data;
+}
+
+/**
+ * Validate research attempts using Zod.
+ * Returns the validated attempts or null if invalid.
+ */
+function validateResearchAttempts(attempts: unknown): number | null {
+  const result = ResearchAttemptsSchema.safeParse(attempts);
+  if (!result.success) {
+    return null;
+  }
+  return result.data;
+}
 
 /**
  * Checks if state has an error and routes to error recovery.
@@ -74,11 +109,9 @@ export function researchRouter(
     return "synthesis";
   }
 
-  // Validate confidence score is a valid number
-  if (
-    typeof state.confidenceScore !== "number" ||
-    isNaN(state.confidenceScore)
-  ) {
+  // Validate confidence score using Zod
+  const validatedConfidence = validateConfidenceScore(state.confidenceScore);
+  if (validatedConfidence === null) {
     logger.warn(
       "Invalid confidence score, defaulting to validator for validation",
       { confidenceScore: state.confidenceScore }
@@ -87,10 +120,10 @@ export function researchRouter(
   }
 
   const route =
-    state.confidenceScore >= CONFIDENCE_THRESHOLD ? "synthesis" : "validator";
+    validatedConfidence >= CONFIDENCE_THRESHOLD ? "synthesis" : "validator";
 
   logger.debug("Research router decision", {
-    confidenceScore: state.confidenceScore,
+    confidenceScore: validatedConfidence,
     threshold: CONFIDENCE_THRESHOLD,
     hasFindings: !!state.researchFindings,
     route
@@ -125,19 +158,16 @@ export function validationRouter(
     return "synthesis";
   }
 
-  // Validate researchAttempts is a valid number
-  if (
-    typeof state.researchAttempts !== "number" ||
-    isNaN(state.researchAttempts) ||
-    state.researchAttempts < 0
-  ) {
+  // Validate researchAttempts using Zod
+  const validatedAttempts = validateResearchAttempts(state.researchAttempts);
+  if (validatedAttempts === null) {
     logger.warn("Invalid researchAttempts, defaulting to synthesis", {
       researchAttempts: state.researchAttempts
     });
     return "synthesis";
   }
 
-  const canRetry = state.researchAttempts < MAX_RESEARCH_ATTEMPTS;
+  const canRetry = validatedAttempts < MAX_RESEARCH_ATTEMPTS;
   const needsMoreResearch = state.validationResult === "insufficient";
 
   let route: "research" | "synthesis";
@@ -160,7 +190,7 @@ export function validationRouter(
 
   logger.debug("Validation router decision", {
     validationResult: state.validationResult,
-    researchAttempts: state.researchAttempts,
+    researchAttempts: validatedAttempts,
     canRetry,
     route,
     reason

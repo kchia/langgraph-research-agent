@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 /**
  * Type definitions for LangGraph state structure.
  *
@@ -6,40 +8,41 @@
  */
 
 /**
+ * Zod schema for an interrupt in a graph task.
+ */
+const GraphInterruptSchema = z.object({
+  value: z.unknown()
+});
+
+/**
+ * Zod schema for a task in graph state.
+ */
+const GraphTaskSchema = z.object({
+  interrupts: z.array(GraphInterruptSchema).optional()
+});
+
+/**
  * Structure of an interrupt in a graph task.
  */
-export interface GraphInterrupt {
-  value: unknown;
-}
+export type GraphInterrupt = z.infer<typeof GraphInterruptSchema>;
 
 /**
  * Structure of a task in graph state.
  */
-export interface GraphTask {
-  interrupts?: GraphInterrupt[];
-}
+export type GraphTask = z.infer<typeof GraphTaskSchema>;
 
 /**
  * Type guard to check if a value is a GraphTask.
  */
 export function isGraphTask(value: unknown): value is GraphTask {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    !Array.isArray(value) && // Exclude arrays
-    (!("interrupts" in value) ||
-      (Array.isArray((value as GraphTask).interrupts) &&
-        (value as GraphTask).interrupts!.every(
-          (i) => typeof i === "object" && i !== null && "value" in i
-        )))
-  );
+  return GraphTaskSchema.safeParse(value).success;
 }
 
 /**
  * Type guard to check if a value is an array of GraphTasks.
  */
 export function isGraphTaskArray(value: unknown): value is GraphTask[] {
-  return Array.isArray(value) && value.every(isGraphTask);
+  return z.array(GraphTaskSchema).safeParse(value).success;
 }
 
 /**

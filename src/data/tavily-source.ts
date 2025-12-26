@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { TavilySearch } from "@langchain/tavily";
 import type {
   ResearchDataSource,
@@ -10,6 +11,45 @@ import { Logger } from "../utils/logger.js";
 import { withRetry } from "../utils/retry.js";
 
 const logger = new Logger("tavily-source");
+
+/**
+ * Zod schema for a single Tavily search result item.
+ */
+const TavilyResultItemSchema = z
+  .object({
+    content: z.string().optional(),
+    snippet: z.string().optional(),
+    url: z.string().optional()
+  })
+  .passthrough();
+
+/**
+ * Zod schema for Tavily response with results array.
+ */
+const TavilyResultsArraySchema = z.array(TavilyResultItemSchema).min(1);
+
+/**
+ * Zod schema for Tavily response with answer string.
+ */
+const TavilyAnswerSchema = z
+  .object({
+    answer: z.string()
+  })
+  .passthrough();
+
+/**
+ * Zod schema for Tavily response with results property.
+ */
+const TavilyResultsObjectSchema = z
+  .object({
+    results: z.array(TavilyResultItemSchema).min(1)
+  })
+  .passthrough();
+
+/**
+ * Zod schema for string response from Tavily.
+ */
+const TavilyStringSchema = z.string();
 
 interface TavilyConfig {
   maxResults?: number;
@@ -126,11 +166,12 @@ export class TavilyDataSource implements ResearchDataSource {
     company: string,
     rawResult: unknown
   ): ResearchFindings | null {
-    // Handle string response (Tavily can return a string answer)
-    if (typeof rawResult === "string") {
+    // Try to parse as string response (Tavily can return a string answer)
+    const stringResult = TavilyStringSchema.safeParse(rawResult);
+    if (stringResult.success) {
       return {
         company,
-        recentNews: rawResult.slice(0, 500),
+        recentNews: stringResult.data.slice(0, 500),
         stockInfo: null,
         keyDevelopments: null,
         sources: [this.getName()],
@@ -138,10 +179,11 @@ export class TavilyDataSource implements ResearchDataSource {
       };
     }
 
-    // Handle array of results
-    if (Array.isArray(rawResult) && rawResult.length > 0) {
-      const combinedContent = rawResult
-        .map((r: any) => r.content || r.snippet || "")
+    // Try to parse as array of results
+    const arrayResult = TavilyResultsArraySchema.safeParse(rawResult);
+    if (arrayResult.success) {
+      const combinedContent = arrayResult.data
+        .map((r) => r.content || r.snippet || "")
         .join("\n\n");
 
       return {
@@ -149,29 +191,37 @@ export class TavilyDataSource implements ResearchDataSource {
         recentNews: this.extractSection(combinedContent, "news"),
         stockInfo: this.extractSection(combinedContent, "stock"),
         keyDevelopments: this.extractSection(combinedContent, "developments"),
-        sources: rawResult.slice(0, 5).map((r: any) => r.url || this.getName()),
-        rawData: { resultCount: rawResult.length }
+        sources: arrayResult.data
+          .slice(0, 5)
+          .map((r) => r.url || this.getName()),
+        rawData: { resultCount: arrayResult.data.length }
       };
     }
 
-    // Handle object with results property
-    if (typeof rawResult === "object" && rawResult !== null) {
-      const obj = rawResult as Record<string, unknown>;
-      if (Array.isArray(obj.results) && obj.results.length > 0) {
-        return this.parseResults(company, obj.results);
-      }
-      if (typeof obj.answer === "string") {
-        return {
-          company,
-          recentNews: obj.answer.slice(0, 500),
-          stockInfo: null,
-          keyDevelopments: null,
-          sources: [this.getName()],
-          rawData: { hasAnswer: true }
-        };
-      }
+    // Try to parse as object with results property
+    const resultsObjectResult = TavilyResultsObjectSchema.safeParse(rawResult);
+    if (resultsObjectResult.success) {
+      return this.parseResults(company, resultsObjectResult.data.results);
     }
 
+    // Try to parse as object with answer property
+    const answerResult = TavilyAnswerSchema.safeParse(rawResult);
+    if (answerResult.success) {
+      return {
+        company,
+        recentNews: answerResult.data.answer.slice(0, 500),
+        stockInfo: null,
+        keyDevelopments: null,
+        sources: [this.getName()],
+        rawData: { hasAnswer: true }
+      };
+    }
+
+    // If none of the schemas match, return null
+    logger.warn("Unable to parse Tavily response", {
+      resultType: typeof rawResult,
+      isArray: Array.isArray(rawResult)
+    });
     return null;
   }
 

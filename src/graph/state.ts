@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { Annotation, MessagesAnnotation } from "@langchain/langgraph";
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -26,27 +27,47 @@ export type AgentName =
   | "error-recovery";
 
 /**
- * Structured research findings from data sources
+ * Zod schema for structured research findings from data sources.
  */
-export interface ResearchFindings {
+export const ResearchFindingsSchema = z.object({
   /** Normalized company name */
-  company: string;
+  company: z.string(),
 
   /** Recent news summary */
-  recentNews: string | null;
+  recentNews: z.string().nullable(),
 
   /** Stock/financial information */
-  stockInfo: string | null;
+  stockInfo: z.string().nullable(),
 
   /** Key business developments */
-  keyDevelopments: string | null;
+  keyDevelopments: z.string().nullable(),
 
   /** Data source citations */
-  sources: string[];
+  sources: z.array(z.string()),
 
   /** Raw data for debugging */
-  rawData: Record<string, unknown>;
-}
+  rawData: z.record(z.unknown())
+});
+
+/**
+ * Structured research findings from data sources
+ */
+export type ResearchFindings = z.infer<typeof ResearchFindingsSchema>;
+
+/**
+ * Zod schema for error context used by error recovery agent.
+ */
+export const ErrorContextSchema = z.object({
+  failedNode: z.string(),
+  errorMessage: z.string(),
+  isRetryable: z.boolean(),
+  originalError: z.unknown().optional()
+});
+
+/**
+ * Error context type for error recovery agent.
+ */
+export type ErrorContext = z.infer<typeof ErrorContextSchema>;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // STATE ANNOTATION
@@ -241,12 +262,7 @@ export const ResearchStateAnnotation = Annotation.Root({
    * Error context for error recovery agent.
    * Set when an unexpected error occurs in a node.
    */
-  errorContext: Annotation<{
-    failedNode: string;
-    errorMessage: string;
-    isRetryable: boolean;
-    originalError?: unknown;
-  } | null>({
+  errorContext: Annotation<ErrorContext | null>({
     reducer: (_, update) => update,
     default: () => null
   }),
