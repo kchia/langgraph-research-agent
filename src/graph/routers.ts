@@ -8,11 +8,35 @@ import { Logger } from "../utils/logger.js";
 const logger = new Logger("routers");
 
 /**
+ * Checks if state has an error and routes to error recovery.
+ * Should be called first in any router to catch errors.
+ *
+ * @param state - Current state
+ * @returns "error-recovery" if error present, null otherwise
+ */
+export function checkForError(state: ResearchState): "error-recovery" | null {
+  if (state.errorContext) {
+    logger.warn("Error detected in state, routing to error recovery", {
+      failedNode: state.errorContext.failedNode,
+      errorMessage: state.errorContext.errorMessage
+    });
+    return "error-recovery";
+  }
+  return null;
+}
+
+/**
  * Routes from Clarity Agent based on query clarity.
  *
  * @returns "interrupt" if clarification needed, "research" if clear
  */
-export function clarityRouter(state: ResearchState): "interrupt" | "research" {
+export function clarityRouter(
+  state: ResearchState
+): "interrupt" | "research" | "error-recovery" {
+  // Check for errors first
+  const errorRoute = checkForError(state);
+  if (errorRoute) return errorRoute;
+
   const route =
     state.clarityStatus === "needs_clarification" ? "interrupt" : "research";
 
@@ -39,11 +63,27 @@ export function clarityRouter(state: ResearchState): "interrupt" | "research" {
  */
 export function researchRouter(
   state: ResearchState
-): "validator" | "synthesis" {
-  // Edge case: no findings at all should go to synthesis with apology
+): "validator" | "synthesis" | "error-recovery" {
+  // Check for errors first
+  const errorRoute = checkForError(state);
+  if (errorRoute) return errorRoute;
+
+  // Edge case: no findings at all should go to synthesis for fallback
   if (!state.researchFindings) {
     logger.warn("No research findings - routing to synthesis for fallback");
     return "synthesis";
+  }
+
+  // Validate confidence score is a valid number
+  if (
+    typeof state.confidenceScore !== "number" ||
+    isNaN(state.confidenceScore)
+  ) {
+    logger.warn(
+      "Invalid confidence score, defaulting to validator for validation",
+      { confidenceScore: state.confidenceScore }
+    );
+    return "validator";
   }
 
   const route =
@@ -68,7 +108,35 @@ export function researchRouter(
  */
 export function validationRouter(
   state: ResearchState
-): "research" | "synthesis" {
+): "research" | "synthesis" | "error-recovery" {
+  // Check for errors first
+  const errorRoute = checkForError(state);
+  if (errorRoute) return errorRoute;
+
+  // Validate validationResult is not pending
+  if (state.validationResult === "pending") {
+    logger.warn(
+      "Validation router called with pending result, defaulting to synthesis",
+      {
+        validationResult: state.validationResult,
+        researchAttempts: state.researchAttempts
+      }
+    );
+    return "synthesis";
+  }
+
+  // Validate researchAttempts is a valid number
+  if (
+    typeof state.researchAttempts !== "number" ||
+    isNaN(state.researchAttempts) ||
+    state.researchAttempts < 0
+  ) {
+    logger.warn("Invalid researchAttempts, defaulting to synthesis", {
+      researchAttempts: state.researchAttempts
+    });
+    return "synthesis";
+  }
+
   const canRetry = state.researchAttempts < MAX_RESEARCH_ATTEMPTS;
   const needsMoreResearch = state.validationResult === "insufficient";
 

@@ -8,7 +8,7 @@ import { Command } from "@langchain/langgraph";
 import { compileResearchGraph } from "./graph/workflow.js";
 import { createNewQueryInput } from "./utils/state-helpers.js";
 import { loadConfig, validateConfig } from "./utils/config.js";
-import { Logger } from "./utils/logger.js";
+import { Logger, generateCorrelationId } from "./utils/logger.js";
 import {
   streamWithInterruptSupport,
   displayProgress
@@ -41,7 +41,10 @@ async function main() {
   // Build and compile graph with checkpointer
   const graph = compileResearchGraph(checkpointer);
   const threadId = crypto.randomUUID();
-  const graphConfig = { configurable: { thread_id: threadId } };
+  const correlationId = generateCorrelationId();
+  const graphConfig = {
+    configurable: { thread_id: threadId, correlation_id: correlationId }
+  };
 
   // Setup readline
   const rl = readline.createInterface({ input, output });

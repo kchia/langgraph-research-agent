@@ -7,7 +7,8 @@ import {
   researchAgent,
   validatorAgent,
   synthesisAgent,
-  clarificationInterrupt
+  clarificationInterrupt,
+  errorRecoveryAgent
 } from "../agents/index.js";
 
 /**
@@ -27,49 +28,66 @@ import {
  * Use compileResearchGraph() to get a compiled graph with checkpointing.
  */
 export function buildResearchWorkflow() {
-  return new StateGraph(ResearchStateAnnotation)
-    // ─── Node Definitions ───
-    .addNode("clarity", clarityAgent)
-    .addNode("interrupt", clarificationInterrupt)
-    .addNode("research", researchAgent)
-    .addNode("validator", validatorAgent)
-    .addNode("synthesis", synthesisAgent)
+  return (
+    new StateGraph(ResearchStateAnnotation)
+      // ─── Node Definitions ───
+      .addNode("clarity", clarityAgent)
+      .addNode("interrupt", clarificationInterrupt)
+      .addNode("research", researchAgent)
+      .addNode("validator", validatorAgent)
+      .addNode("synthesis", synthesisAgent)
+      .addNode("error-recovery", errorRecoveryAgent)
 
-    // ─── Entry Edge ───
-    .addEdge(START, "clarity")
+      // ─── Entry Edge ───
+      .addEdge(START, "clarity")
 
-    // ─── Clarity Routing ───
-    .addConditionalEdges("clarity", clarityRouter, {
-      interrupt: "interrupt",
-      research: "research"
-    })
+      // ─── Clarity Routing ───
+      .addConditionalEdges("clarity", clarityRouter, {
+        interrupt: "interrupt",
+        research: "research",
+        "error-recovery": "error-recovery"
+      })
 
-    // ─── Interrupt Resume Edge ───
-    // Fixed edge: after resume, always re-analyze in clarity
-    .addEdge("interrupt", "clarity")
+      // ─── Interrupt Resume Edge ───
+      // Fixed edge: after resume, always re-analyze in clarity
+      .addEdge("interrupt", "clarity")
 
-    // ─── Research Routing ───
-    .addConditionalEdges("research", researchRouter, {
-      validator: "validator",
-      synthesis: "synthesis"
-    })
+      // ─── Research Routing ───
+      .addConditionalEdges("research", researchRouter, {
+        validator: "validator",
+        synthesis: "synthesis",
+        "error-recovery": "error-recovery"
+      })
 
-    // ─── Validation Routing ───
-    .addConditionalEdges("validator", validationRouter, {
-      research: "research",
-      synthesis: "synthesis"
-    })
+      // ─── Validation Routing ───
+      .addConditionalEdges("validator", validationRouter, {
+        research: "research",
+        synthesis: "synthesis",
+        "error-recovery": "error-recovery"
+      })
 
-    // ─── Synthesis Terminal Edge ───
-    .addEdge("synthesis", END);
+      // ─── Synthesis Terminal Edge ───
+      .addEdge("synthesis", END)
+
+      // ─── Error Recovery Terminal Edge ───
+      .addEdge("error-recovery", END)
+  );
 }
 
 /**
  * Compile the research workflow with a checkpointer.
  *
  * @param checkpointer - Checkpointer for state persistence (required)
+ * @throws Error if checkpointer is null or undefined
  */
 export function compileResearchGraph(checkpointer: BaseCheckpointSaver) {
+  if (!checkpointer) {
+    throw new Error(
+      "Checkpointer is required for graph compilation. " +
+        "Provide a valid BaseCheckpointSaver instance (e.g., MemorySaver or SqliteSaver)."
+    );
+  }
+
   const workflow = buildResearchWorkflow();
   return workflow.compile({ checkpointer });
 }

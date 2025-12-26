@@ -8,11 +8,16 @@ import {
   CLARITY_SYSTEM_PROMPT,
   buildClarityUserPrompt
 } from "../prompts/clarity.prompts.js";
-import { Logger } from "../utils/logger.js";
-import { getLLM } from "../utils/llm-factory.js";
+import { Logger, createLoggerWithCorrelationId } from "../utils/logger.js";
+import { getLLM, supportsStructuredOutput } from "../utils/llm-factory.js";
 import { TokenBudget } from "../utils/token-budget.js";
+import {
+  summarizeMessages,
+  buildConversationContext
+} from "../utils/message-summarization.js";
+import { normalizeCompanyName } from "../data/company-normalization.js";
 
-const logger = new Logger("clarity-agent");
+// Logger is created per-request with correlation ID from state
 
 // Schema for structured LLM output
 const ClarityOutputSchema = z.object({
@@ -28,60 +33,27 @@ type ClarityOutput = z.infer<typeof ClarityOutputSchema>;
  * Normalize company name to full form for consistency.
  * Maps common company name variations to their canonical forms.
  */
-function normalizeCompanyName(company: string | null): string | null {
-  if (!company) return null;
-
-  const normalized = company.trim();
-  const lower = normalized.toLowerCase();
-
-  // Map common variations to full company names
-  const companyMap: Record<string, string> = {
-    apple: "Apple Inc.",
-    tesla: "Tesla, Inc.",
-    microsoft: "Microsoft Corporation",
-    amazon: "Amazon.com, Inc.",
-    google: "Alphabet Inc.",
-    alphabet: "Alphabet Inc.",
-    meta: "Meta Platforms, Inc.",
-    facebook: "Meta Platforms, Inc.",
-    nvidia: "NVIDIA Corporation",
-    netflix: "Netflix, Inc."
-  };
-
-  // Check exact match first
-  if (companyMap[lower]) {
-    return companyMap[lower];
-  }
-
-  // Check if the normalized name already contains common suffixes
-  if (
-    normalized.includes("Inc.") ||
-    normalized.includes("Corporation") ||
-    normalized.includes("Corp.") ||
-    normalized.includes("LLC") ||
-    normalized.includes("Ltd.")
-  ) {
-    return normalized;
-  }
-
-  // Check partial matches (e.g., "Apple Inc" -> "Apple Inc.")
-  for (const [key, value] of Object.entries(companyMap)) {
-    if (lower.startsWith(key + " ") || lower.endsWith(" " + key)) {
-      return value;
-    }
-  }
-
-  // Return as-is if no normalization found
-  return normalized;
-}
+// Company normalization is now handled by the configurable module
+// See src/data/company-normalization.ts
 
 /**
  * Factory function to create Clarity Agent with injectable LLM.
  */
 export function createClarityAgent(llm?: BaseChatModel) {
   const model = getLLM("clarity", llm);
-  // Type assertion needed because BaseChatModel is a union type and TypeScript
-  // cannot determine which withStructuredOutput signature to use
+
+  // Runtime check for structured output support
+  if (!supportsStructuredOutput(model)) {
+    const modelName = model.constructor.name;
+    throw new Error(
+      `Model ${modelName} does not support structured output. ` +
+        `The clarity agent requires a model with withStructuredOutput() method. ` +
+        `Please use a compatible model like ChatAnthropic.`
+    );
+  }
+
+  // After runtime check, safe to use withStructuredOutput
+  // Type assertion needed because TypeScript can't infer the exact return type
   const structuredModel = (model as ChatAnthropic).withStructuredOutput(
     ClarityOutputSchema
   );
@@ -89,6 +61,12 @@ export function createClarityAgent(llm?: BaseChatModel) {
   return async function clarityAgent(
     state: ResearchState
   ): Promise<Partial<ResearchState>> {
+    // Create logger with correlation ID from state
+    const logger = createLoggerWithCorrelationId(
+      "clarity-agent",
+      state.correlationId
+    );
+
     logger.info("Clarity analysis started", {
       query: state.originalQuery,
       previousCompany: state.detectedCompany,
@@ -112,6 +90,8 @@ export function createClarityAgent(llm?: BaseChatModel) {
     }
 
     // Handle empty query
+    // NOTE: We increment clarificationAttempts here because we're requesting clarification.
+    // The Interrupt node does NOT increment - it only reads this value.
     if (!state.originalQuery?.trim()) {
       return {
         clarityStatus: "needs_clarification",
@@ -147,21 +127,20 @@ export function createClarityAgent(llm?: BaseChatModel) {
 
     // Use LLM for analysis
     try {
-      // Use token budget for context selection instead of arbitrary slice
-      const budget = new TokenBudget();
-      const maxContextTokens = 4000;
+      // Check if we need to summarize messages (only if conversation is very long)
+      let conversationSummary = state.conversationSummary;
+      if (!conversationSummary && state.messages.length > 10) {
+        // Only attempt summarization if we have many messages and no summary yet
+        conversationSummary = await summarizeMessages(state.messages);
+      }
 
-      const recentMessages = budget.selectMessagesWithinBudget(
-        state.messages.map((m) => ({
-          content: `${m._getType()}: ${m.content}`,
-          original: m
-        })),
+      // Build conversation context using summary if available
+      const maxContextTokens = 4000;
+      const conversationContext = buildConversationContext(
+        state.messages,
+        conversationSummary,
         maxContextTokens
       );
-
-      const conversationContext = recentMessages
-        .map((m) => m.content)
-        .join("\n");
 
       const response: ClarityOutput = await structuredModel.invoke([
         { role: "system", content: CLARITY_SYSTEM_PROMPT },
@@ -187,23 +166,40 @@ export function createClarityAgent(llm?: BaseChatModel) {
         const normalizedCompany = normalizeCompanyName(
           response.detected_company
         );
-        return {
+        const result: Partial<ResearchState> = {
           clarityStatus: "clear",
           detectedCompany: normalizedCompany,
           clarificationQuestion: null,
           currentAgent: "clarity"
         };
+        // Only include conversationSummary if it was created
+        if (conversationSummary) {
+          result.conversationSummary = conversationSummary;
+        }
+        return result;
       } else {
         // No company detected - use helper for proceed/clarify decision
-        return handleNoCompanyDetected(
+        const result = handleNoCompanyDetected(
+          logger,
           state.clarificationAttempts,
           response.clarification_needed ??
             "Which company would you like to know about?",
           "info"
         );
+        // Include conversation summary if created
+        if (conversationSummary) {
+          return {
+            ...result,
+            conversationSummary
+          };
+        }
+        return result;
       }
     } catch (error) {
-      logger.error("LLM call failed", { error: String(error) });
+      logger.error("Clarity agent LLM call failed", {
+        error: error instanceof Error ? error.message : String(error),
+        query: state.originalQuery
+      });
 
       // Fallback: try to extract company from query
       const bestGuess = extractBestGuess(state.originalQuery);
@@ -218,6 +214,7 @@ export function createClarityAgent(llm?: BaseChatModel) {
 
       // No company extracted - use helper for proceed/clarify decision
       return handleNoCompanyDetected(
+        logger,
         state.clarificationAttempts,
         "I had trouble understanding. Which company are you asking about?",
         "warn"
@@ -253,8 +250,13 @@ function extractBestGuess(query: string): string | null {
  * Handle the case when no company is detected.
  * If clarification was already attempted, proceed gracefully.
  * Otherwise, ask for clarification.
+ *
+ * NOTE: This function increments clarificationAttempts when requesting
+ * clarification. The Interrupt node does NOT increment - it only reads
+ * the value set by the Clarity Agent.
  */
 function handleNoCompanyDetected(
+  logger: Logger,
   clarificationAttempts: number,
   clarificationQuestion: string,
   logLevel: "info" | "warn" = "info"
@@ -271,6 +273,7 @@ function handleNoCompanyDetected(
     };
   }
   // First attempt - ask for clarification
+  // Increment clarificationAttempts here (Clarity Agent responsibility)
   return {
     clarityStatus: "needs_clarification",
     clarificationQuestion,

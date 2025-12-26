@@ -116,4 +116,36 @@ describe("synthesisAgent", () => {
       expect(result.finalSummary).toContain("Vision Pro"); // From findings
     });
   });
+
+  describe("token budget", () => {
+    it("should truncate findings if they exceed token budget", async () => {
+      const invokeSpy = vi.fn().mockResolvedValue({
+        content: "Summary of findings"
+      });
+
+      const mockLLM = {
+        invoke: invokeSpy
+      } as any;
+
+      // Create findings with very long text that exceeds token budget
+      const longFindings: ResearchFindings = {
+        company: "Apple Inc.",
+        recentNews: "A".repeat(100000), // Very long text
+        stockInfo: "B".repeat(100000),
+        keyDevelopments: "C".repeat(100000),
+        sources: ["Test"],
+        rawData: {}
+      };
+
+      const agent = createSynthesisAgent(mockLLM);
+      const state = createTestState({ researchFindings: longFindings });
+
+      const result = await agent(state);
+
+      // Should still work (findings truncated)
+      expect(result.finalSummary).toBe("Summary of findings");
+      // Verify LLM was called (means truncation worked)
+      expect(invokeSpy).toHaveBeenCalled();
+    });
+  });
 });

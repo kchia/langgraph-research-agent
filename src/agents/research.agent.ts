@@ -5,9 +5,7 @@ import type {
 } from "../data/data-source.interface.js";
 import { DataSourceError } from "../data/data-source.interface.js";
 import { createDataSource } from "../data/index.js";
-import { Logger } from "../utils/logger.js";
-
-const logger = new Logger("research-agent");
+import { Logger, createLoggerWithCorrelationId } from "../utils/logger.js";
 
 /**
  * Factory function to create Research Agent with injectable data source.
@@ -18,6 +16,10 @@ export function createResearchAgent(dataSource?: ResearchDataSource) {
   return async function researchAgent(
     state: ResearchState
   ): Promise<Partial<ResearchState>> {
+    const logger = createLoggerWithCorrelationId(
+      "research-agent",
+      state.correlationId
+    );
     const attemptNumber = state.researchAttempts + 1;
 
     logger.info("Research started", {
@@ -68,7 +70,11 @@ export function createResearchAgent(dataSource?: ResearchDataSource) {
           message: error.message
         });
       } else {
-        logger.error("Unexpected error", { error: String(error) });
+        logger.error("Research agent unexpected error", {
+          error: error instanceof Error ? error.message : String(error),
+          company: state.detectedCompany,
+          attempt: attemptNumber
+        });
       }
 
       // Graceful degradation: return null findings, don't crash

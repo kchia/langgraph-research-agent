@@ -1,5 +1,16 @@
 import type { ResearchGraph } from "../graph/workflow.js";
 import type { Command } from "@langchain/langgraph";
+import { validateInterruptData } from "../types/interrupt.js";
+import { Logger } from "./logger.js";
+import {
+  isGraphTaskArray,
+  getInterruptValue,
+  hasInterrupts,
+  type GraphTask
+} from "./graph-state-types.js";
+import { executeWithTimeout } from "./timeout.js";
+
+const logger = new Logger("streaming");
 
 export interface StreamUpdate {
   node: string;
@@ -40,10 +51,17 @@ export async function streamWithProgress(
     const [nodeName, nodeOutput] = entries[0];
     if (nodeName && nodeName !== "__start__") {
       onProgress(nodeName);
-      lastResult = {
-        ...lastResult,
-        ...(nodeOutput as Record<string, unknown>)
-      };
+      // Type-safe merge of node output
+      if (
+        nodeOutput &&
+        typeof nodeOutput === "object" &&
+        !Array.isArray(nodeOutput)
+      ) {
+        lastResult = {
+          ...lastResult,
+          ...(nodeOutput as Record<string, unknown>)
+        };
+      }
     }
   }
 
@@ -80,39 +98,66 @@ export async function streamWithInterruptSupport(
   config: { configurable: { thread_id: string } },
   onProgress: (node: string) => void
 ): Promise<StreamResult> {
-  const stream = await graph.stream(input, {
-    ...config,
-    streamMode: "updates"
-  });
+  return executeWithTimeout(
+    async () => {
+      const stream = await graph.stream(input, {
+        ...config,
+        streamMode: "updates"
+      });
 
-  for await (const update of stream) {
-    const entries = Object.entries(update);
-    if (entries.length === 0) continue;
+      for await (const update of stream) {
+        const entries = Object.entries(update);
+        if (entries.length === 0) continue;
 
-    const [nodeName] = entries[0];
-    if (nodeName && nodeName !== "__start__") {
-      onProgress(nodeName);
-    }
-  }
+        const [nodeName] = entries[0];
+        if (nodeName && nodeName !== "__start__") {
+          onProgress(nodeName);
+        }
+      }
 
-  // Check state after stream for interrupt
-  const state = await graph.getState(config);
-  const hasInterrupt = state.tasks?.some(
-    (t: { interrupts?: unknown[] }) => t.interrupts && t.interrupts.length > 0
+      // Check state after stream for interrupt
+      const state = await graph.getState(config);
+
+      // Type-safe check for interrupts
+      const tasks = state.tasks;
+      if (!isGraphTaskArray(tasks)) {
+        return {
+          result: state.values as Record<string, unknown>,
+          interrupted: false
+        };
+      }
+
+      const firstTask: GraphTask | undefined = tasks[0];
+      const hasInterrupt = firstTask && hasInterrupts(firstTask);
+
+      if (hasInterrupt && firstTask) {
+        const rawInterruptValue = getInterruptValue(firstTask);
+        const interruptData = validateInterruptData(rawInterruptValue);
+
+        if (interruptData) {
+          return {
+            result: state.values as Record<string, unknown>,
+            interrupted: true,
+            interruptData
+          };
+        } else {
+          logger.warn("Invalid interrupt data structure", {
+            rawValue: rawInterruptValue
+          });
+          // Return interrupted=false if data is invalid
+          return {
+            result: state.values as Record<string, unknown>,
+            interrupted: false
+          };
+        }
+      }
+
+      return {
+        result: state.values as Record<string, unknown>,
+        interrupted: false
+      };
+    },
+    undefined,
+    "streamWithInterruptSupport"
   );
-
-  if (hasInterrupt) {
-    const interruptData = (state.tasks[0] as { interrupts?: { value: unknown }[] })
-      ?.interrupts?.[0]?.value as StreamResult["interruptData"];
-    return {
-      result: state.values as Record<string, unknown>,
-      interrupted: true,
-      interruptData
-    };
-  }
-
-  return {
-    result: state.values as Record<string, unknown>,
-    interrupted: false
-  };
 }

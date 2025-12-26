@@ -6,10 +6,9 @@ import {
   VALIDATOR_SYSTEM_PROMPT,
   buildValidatorUserPrompt
 } from "../prompts/validator.prompts.js";
-import { Logger } from "../utils/logger.js";
-import { getLLM } from "../utils/llm-factory.js";
-
-const logger = new Logger("validator-agent");
+import { Logger, createLoggerWithCorrelationId } from "../utils/logger.js";
+import { getLLM, supportsStructuredOutput } from "../utils/llm-factory.js";
+import { TokenBudget } from "../utils/token-budget.js";
 
 const ValidatorOutputSchema = z.object({
   is_sufficient: z.boolean(),
@@ -24,6 +23,19 @@ type ValidatorOutput = z.infer<typeof ValidatorOutputSchema>;
  */
 export function createValidatorAgent(llm?: BaseChatModel) {
   const model = getLLM("validator", llm);
+
+  // Runtime check for structured output support
+  if (!supportsStructuredOutput(model)) {
+    const modelName = model.constructor.name;
+    throw new Error(
+      `Model ${modelName} does not support structured output. ` +
+        `The validator agent requires a model with withStructuredOutput() method. ` +
+        `Please use a compatible model like ChatAnthropic.`
+    );
+  }
+
+  // After runtime check, safe to use withStructuredOutput
+  // Type assertion needed because TypeScript can't infer the exact return type
   const structuredModel = (model as ChatAnthropic).withStructuredOutput(
     ValidatorOutputSchema
   );
@@ -31,6 +43,10 @@ export function createValidatorAgent(llm?: BaseChatModel) {
   return async function validatorAgent(
     state: ResearchState
   ): Promise<Partial<ResearchState>> {
+    const logger = createLoggerWithCorrelationId(
+      "validator-agent",
+      state.correlationId
+    );
     logger.info("Validation started", {
       company: state.detectedCompany,
       confidence: state.confidenceScore,
@@ -49,7 +65,21 @@ export function createValidatorAgent(llm?: BaseChatModel) {
     }
 
     // Format findings for LLM
-    const findingsText = formatFindings(state.researchFindings);
+    let findingsText = formatFindings(state.researchFindings);
+
+    // Apply token budget to findings if they're too long
+    // Reserve tokens for system prompt, query, and response structure
+    const budget = new TokenBudget();
+    const maxFindingsTokens = 6000; // Leave room for prompt and response
+    const findingsTokens = budget.estimateTokens(findingsText);
+
+    if (findingsTokens > maxFindingsTokens) {
+      logger.warn("Findings text exceeds token budget, truncating", {
+        originalTokens: findingsTokens,
+        maxTokens: maxFindingsTokens
+      });
+      findingsText = budget.truncateToFit(findingsText, maxFindingsTokens);
+    }
 
     try {
       const response: ValidatorOutput = await structuredModel.invoke([
@@ -77,7 +107,11 @@ export function createValidatorAgent(llm?: BaseChatModel) {
         currentAgent: "validator"
       };
     } catch (error) {
-      logger.error("Validation LLM failed", { error: String(error) });
+      logger.error("Validator agent LLM call failed", {
+        error: error instanceof Error ? error.message : String(error),
+        company: state.detectedCompany,
+        hasFindings: !!state.researchFindings
+      });
 
       // Fallback: simple rule-based validation
       const hasAllFields = !!(

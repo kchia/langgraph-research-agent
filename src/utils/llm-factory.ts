@@ -27,6 +27,15 @@ export function createLLM(agentType: AgentType): BaseChatModel {
   const config = loadConfig();
   const modelName = config.models?.[agentType] ?? DEFAULT_MODEL;
 
+  // Validate API key before creating LLM
+  if (!config.anthropicApiKey || config.anthropicApiKey.trim() === "") {
+    throw new Error(
+      `ANTHROPIC_API_KEY is required to create LLM instances. ` +
+        `Please set the ANTHROPIC_API_KEY environment variable. ` +
+        `Get your API key from: https://console.anthropic.com/`
+    );
+  }
+
   logger.info("Creating LLM instance", { agentType, model: modelName });
 
   const llm = new ChatAnthropic({
@@ -55,4 +64,26 @@ export function getLLM(
   providedLLM?: BaseChatModel
 ): BaseChatModel {
   return providedLLM ?? createLLM(agentType);
+}
+
+/**
+ * Type guard to check if a model supports structured output.
+ * Models that support structured output have a withStructuredOutput method.
+ *
+ * After this check passes, it's safe to call withStructuredOutput on the model.
+ */
+export function supportsStructuredOutput(
+  model: BaseChatModel
+): model is BaseChatModel & {
+  withStructuredOutput: <T>(schema: T) => {
+    invoke: (messages: unknown[]) => Promise<unknown>;
+  };
+} {
+  return (
+    typeof model === "object" &&
+    model !== null &&
+    "withStructuredOutput" in model &&
+    typeof (model as { withStructuredOutput?: unknown })
+      .withStructuredOutput === "function"
+  );
 }

@@ -22,6 +22,15 @@ export async function createCheckpointer(
 ): Promise<BaseCheckpointSaver> {
   logger.info("Creating checkpointer", { type: config.type });
 
+  // Validate checkpointer type
+  if (config.type !== "memory" && config.type !== "sqlite") {
+    throw new Error(
+      `Invalid checkpointer type: "${config.type}". ` +
+        `Must be one of: "memory", "sqlite". ` +
+        `Received: ${JSON.stringify(config.type)}`
+    );
+  }
+
   switch (config.type) {
     case "sqlite": {
       // Dynamic import to avoid requiring sqlite dependency if not used
@@ -29,7 +38,9 @@ export async function createCheckpointer(
       try {
         // Use variable to prevent TypeScript from checking the module
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const sqliteModule = (await import(/* webpackIgnore: true */ moduleName)) as any;
+        const sqliteModule = (await import(
+          /* webpackIgnore: true */ moduleName
+        )) as any;
         const SqliteSaver = sqliteModule.SqliteSaver;
         const dbPath = config.sqlitePath ?? ":memory:";
         logger.info("Initializing SQLite checkpointer", { path: dbPath });
@@ -44,7 +55,6 @@ export async function createCheckpointer(
     }
 
     case "memory":
-    default:
       logger.info("Using in-memory checkpointer");
       return new MemorySaver();
   }
@@ -52,10 +62,23 @@ export async function createCheckpointer(
 
 /**
  * Get checkpointer configuration from environment variables.
+ *
+ * @throws Error if CHECKPOINTER_TYPE is set to an invalid value
  */
 export function getCheckpointerConfigFromEnv(): CheckpointerConfig {
+  const type = (process.env.CHECKPOINTER_TYPE ?? "memory") as CheckpointerType;
+
+  // Validate checkpointer type
+  if (type !== "memory" && type !== "sqlite") {
+    throw new Error(
+      `Invalid CHECKPOINTER_TYPE: "${type}". ` +
+        `Must be one of: "memory", "sqlite". ` +
+        `Received: ${JSON.stringify(type)}`
+    );
+  }
+
   return {
-    type: (process.env.CHECKPOINTER_TYPE ?? "memory") as CheckpointerType,
+    type,
     sqlitePath: process.env.CHECKPOINTER_SQLITE_PATH
   };
 }

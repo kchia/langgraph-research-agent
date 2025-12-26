@@ -8,6 +8,8 @@
     "dev": "tsx watch src/index.ts",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
+    "test:all": "vitest run && vitest run --config vitest.e2e.config.ts",
     "generate-diagram": "tsx src/scripts/generate-diagram.ts"
   },
   "dependencies": {

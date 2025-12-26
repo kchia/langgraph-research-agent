@@ -50,7 +50,9 @@ describe("Interrupt Flow Integration", () => {
       }
       return {
         clarityStatus: "clear",
-        detectedCompany: state.originalQuery, // Use the resumed query as company
+        // Use clarificationResponse (the resumed value) as company
+        // Note: originalQuery is preserved and not overwritten (correct behavior)
+        detectedCompany: state.clarificationResponse ?? state.originalQuery,
         currentAgent: "clarity"
       };
     };

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { HumanMessage } from "@langchain/core/messages";
+import { MemorySaver } from "@langchain/langgraph";
 import {
   buildResearchGraph,
   type ResearchGraph
@@ -10,7 +11,7 @@ describe("Graph Structure", () => {
   let threadId: string;
 
   beforeEach(() => {
-    graph = buildResearchGraph();
+    graph = buildResearchGraph(new MemorySaver());
     threadId = crypto.randomUUID();
   });
 
@@ -40,8 +41,9 @@ describe("Graph Structure", () => {
       expect(result.currentAgent).toBe("synthesis");
       expect(result.finalSummary).toContain("Apple");
 
-      // Should not have interrupted
-      expect(result.__interrupt__).toBeUndefined();
+      // Should not have interrupted (check graph state)
+      const state = await graph.getState(getConfig());
+      expect(state.next).toEqual([]);
     });
 
     it("should track agent progression correctly", async () => {

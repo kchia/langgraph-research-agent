@@ -16,6 +16,10 @@ import { validateClarificationResponse } from "../types/interrupt.js";
  * 4. Code after interrupt() executes
  *
  * Therefore: Keep code before interrupt() IDEMPOTENT (no side effects).
+ *
+ * NOTE: This node does NOT increment clarificationAttempts. The Clarity Agent
+ * is responsible for incrementing clarificationAttempts when it determines
+ * clarification is needed. This node only reads the value for display purposes.
  */
 export async function clarificationInterrupt(
   state: ResearchState

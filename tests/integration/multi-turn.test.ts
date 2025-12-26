@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { HumanMessage } from "@langchain/core/messages";
+import { MemorySaver } from "@langchain/langgraph";
 import {
   buildResearchGraph,
   type ResearchGraph
@@ -10,7 +11,7 @@ describe("Multi-Turn Conversation", () => {
   let graph: ResearchGraph;
 
   beforeEach(() => {
-    graph = buildResearchGraph();
+    graph = buildResearchGraph(new MemorySaver());
   });
 
   it("should accumulate messages across turns", async () => {

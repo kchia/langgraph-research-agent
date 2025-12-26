@@ -1,6 +1,14 @@
 import type { ResearchGraph } from "../graph/workflow.js";
 import type { Command } from "@langchain/langgraph";
 import { Logger } from "./logger.js";
+import { validateInterruptData } from "../types/interrupt.js";
+import {
+  isGraphTaskArray,
+  getInterruptValue,
+  hasInterrupts,
+  type GraphTask
+} from "./graph-state-types.js";
+import { executeWithTimeout } from "./timeout.js";
 
 const logger = new Logger("token-streaming");
 
@@ -41,75 +49,165 @@ export async function streamWithTokens(
   config: { configurable: { thread_id: string } },
   callbacks: TokenStreamCallbacks = {}
 ): Promise<TokenStreamResult> {
-  let currentNode = "";
+  return executeWithTimeout(
+    async () => {
+      let currentNode = "";
 
-  try {
-    const stream = graph.streamEvents(input, {
-      ...config,
-      version: "v2"
-    });
+      try {
+        const stream = graph.streamEvents(input, {
+          ...config,
+          version: "v2"
+        });
 
-    for await (const event of stream) {
-      // Node lifecycle events
-      if (event.event === "on_chain_start") {
-        const nodeName = event.name;
-        if (
-          nodeName &&
-          !nodeName.startsWith("__") &&
-          nodeName !== currentNode
-        ) {
-          currentNode = nodeName;
-          callbacks.onNodeStart?.(nodeName);
+        for await (const event of stream) {
+          // Node lifecycle events
+          if (event.event === "on_chain_start") {
+            const nodeName = event.name;
+            if (
+              nodeName &&
+              !nodeName.startsWith("__") &&
+              nodeName !== currentNode
+            ) {
+              currentNode = nodeName;
+              callbacks.onNodeStart?.(nodeName);
+            }
+          }
+
+          if (event.event === "on_chain_end" && event.name) {
+            if (!event.name.startsWith("__")) {
+              callbacks.onNodeEnd?.(event.name, event.data?.output);
+            }
+          }
+
+          // LLM token streaming
+          if (event.event === "on_llm_stream" && event.data?.chunk) {
+            const chunk = event.data.chunk;
+            const content = chunk.content;
+            if (content && typeof content === "string") {
+              callbacks.onToken?.(content, currentNode);
+            }
+          }
+
+          // Handle errors from chain events
+          if (event.event === "on_chain_error") {
+            // Type-safe error extraction
+            const errorData = event.data;
+            let error: Error | null = null;
+            let errorNode = currentNode;
+
+            // Extract error from event data
+            if (
+              errorData &&
+              typeof errorData === "object" &&
+              "error" in errorData &&
+              errorData.error instanceof Error
+            ) {
+              error = errorData.error;
+            }
+
+            // Try to get node name from event if available
+            if (event.name && typeof event.name === "string") {
+              errorNode = event.name;
+            }
+
+            // Call error callback if error was found
+            if (error && callbacks.onError) {
+              callbacks.onError(error, errorNode);
+            } else if (callbacks.onError) {
+              // If error not in expected format, create Error from event
+              const fallbackError = new Error(
+                `Chain error in node: ${errorNode}` +
+                  (errorData ? ` - ${JSON.stringify(errorData)}` : "")
+              );
+              callbacks.onError(fallbackError, errorNode);
+            }
+          }
         }
+      } catch (error) {
+        logger.error("Stream error", {
+          error: error instanceof Error ? error.message : String(error),
+          node: currentNode
+        });
+
+        // Always call error callback if available, even for non-Error types
+        if (callbacks.onError) {
+          const errorToReport =
+            error instanceof Error
+              ? error
+              : new Error(
+                  `Unexpected error type: ${typeof error} - ${String(error)}`
+                );
+          callbacks.onError(errorToReport, currentNode);
+        }
+
+        throw error;
       }
 
-      if (event.event === "on_chain_end" && event.name) {
-        if (!event.name.startsWith("__")) {
-          callbacks.onNodeEnd?.(event.name, event.data?.output);
-        }
-      }
+      // Check for interrupts
+      try {
+        const state = await graph.getState(config);
 
-      // LLM token streaming
-      if (event.event === "on_llm_stream" && event.data?.chunk) {
-        const chunk = event.data.chunk;
-        const content = chunk.content;
-        if (content && typeof content === "string") {
-          callbacks.onToken?.(content, currentNode);
+        // Type-safe check for interrupts
+        const tasks = state.tasks;
+        if (!isGraphTaskArray(tasks)) {
+          return {
+            result: state.values as Record<string, unknown>,
+            interrupted: false
+          };
         }
-      }
 
-      // Handle errors
-      if (event.event === "on_chain_error") {
-        const errorData = event.data as { error?: Error } | undefined;
-        if (errorData?.error) {
-          callbacks.onError?.(errorData.error, currentNode);
+        const firstTask: GraphTask | undefined = tasks[0];
+        const hasInterrupt = firstTask && hasInterrupts(firstTask);
+
+        if (hasInterrupt && firstTask) {
+          const rawInterruptValue = getInterruptValue(firstTask);
+          const interruptData = validateInterruptData(rawInterruptValue);
+
+          if (interruptData) {
+            return {
+              result: state.values as Record<string, unknown>,
+              interrupted: true,
+              interruptData
+            };
+          } else {
+            logger.warn("Invalid interrupt data structure", {
+              rawValue: rawInterruptValue
+            });
+            // Return interrupted=false if data is invalid
+            return {
+              result: state.values as Record<string, unknown>,
+              interrupted: false
+            };
+          }
         }
-      }
-    }
-  } catch (error) {
-    logger.error("Stream error", { error: String(error) });
-    throw error;
-  }
 
-  // Check for interrupts
-  const state = await graph.getState(config);
-  const tasks = state.tasks as Array<{ interrupts?: Array<{ value: unknown }> }>;
-  const hasInterrupt = tasks?.some(
-    (t) => t.interrupts && t.interrupts.length > 0
+        return {
+          result: state.values as Record<string, unknown>,
+          interrupted: false
+        };
+      } catch (error) {
+        logger.error("Error checking for interrupts", {
+          error: error instanceof Error ? error.message : String(error)
+        });
+
+        // Call error callback if available
+        if (callbacks.onError) {
+          const errorToReport =
+            error instanceof Error
+              ? error
+              : new Error(
+                  `Error checking interrupts: ${typeof error} - ${String(
+                    error
+                  )}`
+                );
+          callbacks.onError(errorToReport, currentNode || "unknown");
+        }
+
+        // Re-throw to maintain error propagation
+        throw error;
+      }
+    },
+    undefined,
+    "streamWithTokens"
   );
-
-  if (hasInterrupt && tasks?.[0]?.interrupts?.[0]) {
-    const interruptData = tasks[0].interrupts[0]
-      .value as TokenStreamResult["interruptData"];
-    return {
-      result: state.values as Record<string, unknown>,
-      interrupted: true,
-      interruptData
-    };
-  }
-
-  return {
-    result: state.values as Record<string, unknown>,
-    interrupted: false
-  };
 }

@@ -161,4 +161,75 @@ describe("clarityAgent", () => {
       expect(result.clarificationQuestion).toContain("Hello");
     });
   });
+
+  describe("model compatibility", () => {
+    it("should throw error for model without structured output support", () => {
+      // Create a mock model without withStructuredOutput method
+      const unsupportedModel = {
+        invoke: vi.fn()
+      } as any;
+
+      expect(() => createClarityAgent(unsupportedModel)).toThrow(
+        "does not support structured output"
+      );
+    });
+
+    it("should work with model that has withStructuredOutput", () => {
+      const supportedModel = createMockLLM({
+        is_clear: true,
+        detected_company: "Apple Inc.",
+        clarification_needed: null,
+        reasoning: "Test"
+      });
+
+      // Should not throw
+      expect(() => createClarityAgent(supportedModel)).not.toThrow();
+    });
+  });
+
+  describe("conversation summary", () => {
+    it("should use existing conversation summary if available", async () => {
+      const mockLLM = createMockLLM({
+        is_clear: true,
+        detected_company: "Apple Inc.",
+        clarification_needed: null,
+        reasoning: "Company mentioned"
+      });
+
+      const agent = createClarityAgent(mockLLM);
+      const state = createTestState({
+        originalQuery: "Tell me about Apple",
+        conversationSummary: "Previous conversation about tech companies"
+      });
+
+      const result = await agent(state);
+
+      expect(result.clarityStatus).toBe("clear");
+      expect(result.detectedCompany).toBe("Apple Inc.");
+      // Summary should be preserved if it exists
+      if (result.conversationSummary !== undefined) {
+        expect(result.conversationSummary).toBeTruthy();
+      }
+    });
+
+    it("should work without conversation summary", async () => {
+      const mockLLM = createMockLLM({
+        is_clear: true,
+        detected_company: "Apple Inc.",
+        clarification_needed: null,
+        reasoning: "Company mentioned"
+      });
+
+      const agent = createClarityAgent(mockLLM);
+      const state = createTestState({
+        originalQuery: "Tell me about Apple",
+        conversationSummary: null
+      });
+
+      const result = await agent(state);
+
+      expect(result.clarityStatus).toBe("clear");
+      expect(result.detectedCompany).toBe("Apple Inc.");
+    });
+  });
 });

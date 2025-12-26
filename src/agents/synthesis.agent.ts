@@ -6,10 +6,9 @@ import {
   SYNTHESIS_SYSTEM_PROMPT,
   buildSynthesisUserPrompt
 } from "../prompts/synthesis.prompts.js";
-import { Logger } from "../utils/logger.js";
+import { Logger, createLoggerWithCorrelationId } from "../utils/logger.js";
 import { getLLM } from "../utils/llm-factory.js";
-
-const logger = new Logger("synthesis-agent");
+import { TokenBudget } from "../utils/token-budget.js";
 
 /**
  * Factory function to create Synthesis Agent with injectable LLM.
@@ -20,6 +19,10 @@ export function createSynthesisAgent(llm?: BaseChatModel) {
   return async function synthesisAgent(
     state: ResearchState
   ): Promise<Partial<ResearchState>> {
+    const logger = createLoggerWithCorrelationId(
+      "synthesis-agent",
+      state.correlationId
+    );
     logger.info("Synthesis started", {
       company: state.detectedCompany,
       confidence: state.confidenceScore,
@@ -41,7 +44,21 @@ export function createSynthesisAgent(llm?: BaseChatModel) {
     const confidenceLevel = getConfidenceLevel(state);
 
     // Format findings for LLM
-    const findingsText = formatFindings(state.researchFindings);
+    let findingsText = formatFindings(state.researchFindings);
+
+    // Apply token budget to findings if they're too long
+    // Reserve tokens for system prompt, query, and response
+    const budget = new TokenBudget();
+    const maxFindingsTokens = 8000; // Synthesis can handle more tokens
+    const findingsTokens = budget.estimateTokens(findingsText);
+
+    if (findingsTokens > maxFindingsTokens) {
+      logger.warn("Findings text exceeds token budget, truncating", {
+        originalTokens: findingsTokens,
+        maxTokens: maxFindingsTokens
+      });
+      findingsText = budget.truncateToFit(findingsText, maxFindingsTokens);
+    }
 
     try {
       const response = await model.invoke([
@@ -80,7 +97,11 @@ export function createSynthesisAgent(llm?: BaseChatModel) {
         currentAgent: "synthesis"
       };
     } catch (error) {
-      logger.error("Synthesis LLM failed", { error: String(error) });
+      logger.error("Synthesis agent LLM call failed", {
+        error: error instanceof Error ? error.message : String(error),
+        company: state.detectedCompany,
+        hasFindings: !!state.researchFindings
+      });
 
       // Fallback: basic template response
       const fallbackSummary = generateFallbackSummary(state);

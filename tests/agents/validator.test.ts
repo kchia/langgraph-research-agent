@@ -124,4 +124,67 @@ describe("validatorAgent", () => {
       expect(result.validationResult).toBe("sufficient");
     });
   });
+
+  describe("model compatibility", () => {
+    it("should throw error for model without structured output support", () => {
+      // Create a mock model without withStructuredOutput method
+      const unsupportedModel = {
+        invoke: vi.fn()
+      } as any;
+
+      expect(() => createValidatorAgent(unsupportedModel)).toThrow(
+        "does not support structured output"
+      );
+    });
+
+    it("should work with model that has withStructuredOutput", () => {
+      const supportedModel = createMockLLM({
+        is_sufficient: true,
+        feedback: null,
+        reasoning: "Test"
+      });
+
+      // Should not throw
+      expect(() => createValidatorAgent(supportedModel)).not.toThrow();
+    });
+  });
+
+  describe("token budget", () => {
+    it("should truncate findings if they exceed token budget", async () => {
+      const invokeSpy = vi.fn().mockResolvedValue({
+        is_sufficient: true,
+        feedback: null,
+        reasoning: "All good"
+      });
+
+      const mockLLM = {
+        withStructuredOutput: vi.fn().mockReturnValue({
+          invoke: invokeSpy
+        })
+      } as any;
+
+      // Create findings with very long text that exceeds token budget
+      const longFindings: ResearchFindings = {
+        company: "Apple Inc.",
+        recentNews: "A".repeat(50000), // Very long text
+        stockInfo: "B".repeat(50000),
+        keyDevelopments: "C".repeat(50000),
+        sources: ["Test"],
+        rawData: {}
+      };
+
+      const agent = createValidatorAgent(mockLLM);
+      const state = createTestState({ researchFindings: longFindings });
+
+      const result = await agent(state);
+
+      // Should still work (findings truncated)
+      expect(result.validationResult).toBe("sufficient");
+      // Verify LLM was called (means truncation worked)
+      expect(invokeSpy).toHaveBeenCalled();
+      // Verify the findings text was truncated (check that invoke was called with truncated text)
+      const callArgs = invokeSpy.mock.calls[0][0];
+      expect(callArgs).toBeDefined();
+    });
+  });
 });

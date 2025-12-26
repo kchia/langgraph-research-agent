@@ -49,3 +49,56 @@ export function validateClarificationResponse(value: unknown): string {
   }
   return value.trim();
 }
+
+/**
+ * Type for interrupt data returned from graph state.
+ * Matches the structure of ClarificationInterruptPayload.
+ */
+export interface InterruptData {
+  type: string;
+  question: string;
+  originalQuery: string;
+  attempt: number;
+}
+
+/**
+ * Type guard to check if a value is valid interrupt data.
+ *
+ * @param value - The value to check
+ * @returns True if value is valid interrupt data
+ */
+export function isInterruptData(value: unknown): value is InterruptData {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const data = value as Record<string, unknown>;
+
+  return (
+    typeof data.type === "string" &&
+    typeof data.question === "string" &&
+    typeof data.originalQuery === "string" &&
+    typeof data.attempt === "number" &&
+    data.attempt >= 0
+  );
+}
+
+/**
+ * Validate and extract interrupt data from graph state.
+ * Returns null if the data is invalid or missing.
+ *
+ * @param value - The value from graph state interrupts
+ * @returns Validated interrupt data or null if invalid
+ */
+export function validateInterruptData(value: unknown): InterruptData | null {
+  if (!isInterruptData(value)) {
+    return null;
+  }
+
+  return {
+    type: value.type,
+    question: value.question,
+    originalQuery: value.originalQuery,
+    attempt: value.attempt
+  };
+}

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { HumanMessage } from "@langchain/core/messages";
-import { Command } from "@langchain/langgraph";
+import { Command, MemorySaver } from "@langchain/langgraph";
 import {
   buildResearchGraph,
   type ResearchGraph
@@ -15,13 +15,11 @@ describe("Full Workflow Integration", () => {
   let graph: ResearchGraph;
 
   beforeEach(() => {
-    graph = buildResearchGraph();
+    graph = buildResearchGraph(new MemorySaver());
   });
 
   describe("Multi-Turn Conversation with Clarification", () => {
-    it(
-      "should handle: vague query → clarification → research → follow-up",
-      async () => {
+    it("should handle: vague query → clarification → research → follow-up", async () => {
       const config = { configurable: { thread_id: "full-workflow-clarify" } };
 
       // Turn 1: Vague query that triggers clarification
@@ -72,9 +70,7 @@ describe("Full Workflow Integration", () => {
       );
       // Should have: original vague query + clarification + follow-up
       expect(humanMessages.length).toBeGreaterThanOrEqual(3);
-      },
-      120000 // Longer timeout for multi-turn with real API calls
-    );
+    }, 120000); // Longer timeout for multi-turn with real API calls
   });
 
   describe("Validation Retry Loop", () => {
@@ -155,33 +151,27 @@ describe("Full Workflow Integration", () => {
       );
       expect(allHumanMessages.length).toBe(2);
 
-      const allAiMessages = turn2.messages.filter(
-        (m) => m._getType() === "ai"
-      );
+      const allAiMessages = turn2.messages.filter((m) => m._getType() === "ai");
       expect(allAiMessages.length).toBeGreaterThanOrEqual(2);
     });
 
-    it(
-      "should switch company context when explicitly mentioned",
-      async () => {
-        const config = { configurable: { thread_id: "company-switch" } };
+    it("should switch company context when explicitly mentioned", async () => {
+      const config = { configurable: { thread_id: "company-switch" } };
 
-        // Turn 1: Start with Apple
-        const turn1 = await graph.invoke(
-          createNewQueryInput("Tell me about Apple"),
-          config
-        );
-        expect(turn1.detectedCompany).toBe("Apple Inc.");
+      // Turn 1: Start with Apple
+      const turn1 = await graph.invoke(
+        createNewQueryInput("Tell me about Apple"),
+        config
+      );
+      expect(turn1.detectedCompany).toBe("Apple Inc.");
 
-        // Turn 2: Switch to Tesla - should detect new company
-        const turn2 = await graph.invoke(
-          createNewQueryInput("Now tell me about Tesla instead"),
-          config
-        );
-        expect(turn2.detectedCompany).toBe("Tesla, Inc.");
-      },
-      120000
-    ); // Longer timeout for multi-turn with real API calls
+      // Turn 2: Switch to Tesla - should detect new company
+      const turn2 = await graph.invoke(
+        createNewQueryInput("Now tell me about Tesla instead"),
+        config
+      );
+      expect(turn2.detectedCompany).toBe("Tesla, Inc.");
+    }, 120000); // Longer timeout for multi-turn with real API calls
   });
 
   describe("Edge Cases", () => {

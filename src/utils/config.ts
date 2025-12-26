@@ -39,8 +39,13 @@ export function loadConfig(): AppConfig {
 }
 
 export function validateConfig(config: AppConfig): void {
-  if (!config.anthropicApiKey) {
-    console.warn("Warning: ANTHROPIC_API_KEY not set. LLM features will fail.");
+  // Note: API key validation happens in llm-factory.ts when LLM is created
+  // This allows the app to start even without API key (for testing/config validation)
+  // but will fail fast when trying to use LLM features
+  if (!config.anthropicApiKey || config.anthropicApiKey.trim() === "") {
+    console.warn(
+      "Warning: ANTHROPIC_API_KEY not set. LLM features will fail at runtime."
+    );
   }
 
   if (config.dataSource === "tavily" && !config.tavilyApiKey) {
