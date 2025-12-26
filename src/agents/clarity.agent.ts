@@ -62,13 +62,9 @@ function normalizeCompanyName(company: string | null): string | null {
     return normalized;
   }
 
-  // Check partial matches (e.g., "Apple" -> "Apple Inc.")
+  // Check partial matches (e.g., "Apple Inc" -> "Apple Inc.")
   for (const [key, value] of Object.entries(companyMap)) {
-    if (
-      lower === key ||
-      lower.startsWith(key + " ") ||
-      lower.endsWith(" " + key)
-    ) {
+    if (lower.startsWith(key + " ") || lower.endsWith(" " + key)) {
       return value;
     }
   }
@@ -97,6 +93,21 @@ export function createClarityAgent(llm?: BaseChatModel) {
       attempt: state.clarificationAttempts
     });
 
+    // Check max clarification attempts FIRST to prevent infinite loops
+    // (e.g., repeated empty queries)
+    if (state.clarificationAttempts >= MAX_CLARIFICATION_ATTEMPTS) {
+      logger.warn("Max clarification attempts reached, forcing proceed");
+      const fallbackCompany =
+        state.detectedCompany ?? extractBestGuess(state.originalQuery ?? "");
+      return {
+        clarityStatus: "clear",
+        detectedCompany: fallbackCompany
+          ? normalizeCompanyName(fallbackCompany)
+          : null,
+        currentAgent: "clarity"
+      };
+    }
+
     // Handle empty query
     if (!state.originalQuery?.trim()) {
       return {
@@ -116,20 +127,6 @@ export function createClarityAgent(llm?: BaseChatModel) {
         detectedCompany: null,
         finalSummary:
           "No problem! Let me know if you'd like to research anything else.",
-        currentAgent: "clarity"
-      };
-    }
-
-    // Check max clarification attempts
-    if (state.clarificationAttempts >= MAX_CLARIFICATION_ATTEMPTS) {
-      logger.warn("Max clarification attempts reached, forcing proceed");
-      const fallbackCompany =
-        state.detectedCompany ?? extractBestGuess(state.originalQuery);
-      return {
-        clarityStatus: "clear",
-        detectedCompany: fallbackCompany
-          ? normalizeCompanyName(fallbackCompany)
-          : null,
         currentAgent: "clarity"
       };
     }
@@ -170,18 +167,8 @@ export function createClarityAgent(llm?: BaseChatModel) {
         reasoning: response.reasoning
       });
 
-      if (response.is_clear && response.detected_company) {
-        const normalizedCompany = normalizeCompanyName(
-          response.detected_company
-        );
-        return {
-          clarityStatus: "clear",
-          detectedCompany: normalizedCompany,
-          clarificationQuestion: null,
-          currentAgent: "clarity"
-        };
-      } else if (response.detected_company) {
-        // Company detected but query not fully clear - proceed anyway
+      // If company detected, proceed (regardless of is_clear flag)
+      if (response.detected_company) {
         const normalizedCompany = normalizeCompanyName(
           response.detected_company
         );
@@ -192,29 +179,13 @@ export function createClarityAgent(llm?: BaseChatModel) {
           currentAgent: "clarity"
         };
       } else {
-        // No company detected
-        // If we've already tried clarification, proceed gracefully
-        // Otherwise, ask for clarification first
-        if (state.clarificationAttempts > 0) {
-          logger.info(
-            "No company detected after clarification attempt, proceeding gracefully"
-          );
-          return {
-            clarityStatus: "clear",
-            detectedCompany: null,
-            clarificationQuestion: null,
-            currentAgent: "clarity"
-          };
-        }
-        // First attempt - ask for clarification
-        return {
-          clarityStatus: "needs_clarification",
-          clarificationQuestion:
-            response.clarification_needed ??
+        // No company detected - use helper for proceed/clarify decision
+        return handleNoCompanyDetected(
+          state.clarificationAttempts,
+          response.clarification_needed ??
             "Which company would you like to know about?",
-          clarificationAttempts: state.clarificationAttempts + 1,
-          currentAgent: "clarity"
-        };
+          "info"
+        );
       }
     } catch (error) {
       logger.error("LLM call failed", { error: String(error) });
@@ -230,26 +201,12 @@ export function createClarityAgent(llm?: BaseChatModel) {
         };
       }
 
-      // If no company can be extracted and we've already tried clarification, proceed gracefully
-      // Otherwise, ask for clarification
-      if (state.clarificationAttempts > 0) {
-        logger.warn(
-          "No company detected after clarification attempt, proceeding gracefully"
-        );
-        return {
-          clarityStatus: "clear",
-          detectedCompany: null,
-          currentAgent: "clarity"
-        };
-      }
-      // First attempt - ask for clarification
-      return {
-        clarityStatus: "needs_clarification",
-        clarificationQuestion:
-          "I had trouble understanding. Which company are you asking about?",
-        clarificationAttempts: state.clarificationAttempts + 1,
-        currentAgent: "clarity"
-      };
+      // No company extracted - use helper for proceed/clarify decision
+      return handleNoCompanyDetected(
+        state.clarificationAttempts,
+        "I had trouble understanding. Which company are you asking about?",
+        "warn"
+      );
     }
   };
 }
@@ -275,6 +232,36 @@ function extractBestGuess(query: string): string | null {
     }
   }
   return null;
+}
+
+/**
+ * Handle the case when no company is detected.
+ * If clarification was already attempted, proceed gracefully.
+ * Otherwise, ask for clarification.
+ */
+function handleNoCompanyDetected(
+  clarificationAttempts: number,
+  clarificationQuestion: string,
+  logLevel: "info" | "warn" = "info"
+): Partial<ResearchState> {
+  if (clarificationAttempts > 0) {
+    logger[logLevel](
+      "No company detected after clarification attempt, proceeding gracefully"
+    );
+    return {
+      clarityStatus: "clear",
+      detectedCompany: null,
+      clarificationQuestion: null,
+      currentAgent: "clarity"
+    };
+  }
+  // First attempt - ask for clarification
+  return {
+    clarityStatus: "needs_clarification",
+    clarificationQuestion,
+    clarificationAttempts: clarificationAttempts + 1,
+    currentAgent: "clarity"
+  };
 }
 
 // Default export for graph (uses default LLM)
