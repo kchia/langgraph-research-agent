@@ -7,7 +7,8 @@
     "start": "tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "generate-diagram": "tsx src/scripts/generate-diagram.ts"
   },
   "dependencies": {
     "@langchain/langgraph": "~0.2.0",
