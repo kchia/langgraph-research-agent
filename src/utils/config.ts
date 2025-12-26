@@ -3,22 +3,38 @@ import { config as loadEnv } from "dotenv";
 // Load .env file
 loadEnv();
 
+export interface ModelConfig {
+  clarity: string;
+  validator: string;
+  synthesis: string;
+}
+
 export interface AppConfig {
   anthropicApiKey: string | undefined;
   tavilyApiKey: string | undefined;
   dataSource: "mock" | "tavily" | "auto";
   logLevel: string;
   langsmithEnabled: boolean;
+  models?: Partial<ModelConfig>;
 }
 
 export function loadConfig(): AppConfig {
+  // Build models config from env vars if provided
+  const models: Partial<ModelConfig> = {};
+  if (process.env.CLARITY_MODEL) models.clarity = process.env.CLARITY_MODEL;
+  if (process.env.VALIDATOR_MODEL)
+    models.validator = process.env.VALIDATOR_MODEL;
+  if (process.env.SYNTHESIS_MODEL)
+    models.synthesis = process.env.SYNTHESIS_MODEL;
+
   return {
     anthropicApiKey: process.env.ANTHROPIC_API_KEY,
     tavilyApiKey: process.env.TAVILY_API_KEY,
     dataSource: (process.env.RESEARCH_DATA_SOURCE ??
       "auto") as AppConfig["dataSource"],
     logLevel: process.env.LOG_LEVEL ?? "info",
-    langsmithEnabled: process.env.LANGCHAIN_TRACING_V2 === "true"
+    langsmithEnabled: process.env.LANGCHAIN_TRACING_V2 === "true",
+    models: Object.keys(models).length > 0 ? models : undefined
   };
 }
 
