@@ -1,3 +1,5 @@
+import { escapeForPrompt } from "../utils/sanitization.js";
+
 export const VALIDATOR_SYSTEM_PROMPT = `You are a research quality validator.
 
 Assess whether the research findings adequately answer the user's question.
@@ -19,10 +21,14 @@ export function buildValidatorUserPrompt(
   findings: string,
   confidenceScore: number
 ): string {
-  return `Original query: "${originalQuery}"
+  const safeQuery = escapeForPrompt(originalQuery);
+  const safeFindings = escapeForPrompt(findings);
+
+  return `Original query:
+${safeQuery}
 
 Research findings:
-${findings}
+${safeFindings}
 
 Confidence score: ${confidenceScore}/10
 

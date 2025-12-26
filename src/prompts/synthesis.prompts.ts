@@ -1,3 +1,5 @@
+import { escapeForPrompt } from "../utils/sanitization.js";
+
 export const SYNTHESIS_SYSTEM_PROMPT = `You are a research synthesis agent.
 
 Generate a clear, helpful summary of the research findings for the user.
@@ -11,18 +13,22 @@ export function buildSynthesisUserPrompt(
   findings: string,
   confidenceLevel: "high" | "medium" | "low"
 ): string {
+  const safeQuery = escapeForPrompt(originalQuery);
+  const safeFindings = escapeForPrompt(findings);
+
   const confidenceNote = {
     high: "",
     medium: "Note: Some information may be incomplete.",
     low: "Note: Limited information available. Please verify independently."
   }[confidenceLevel];
 
-  return `User's question: "${originalQuery}"
+  return `User's question:
+${safeQuery}
 
 Company: ${company}
 
 Research findings:
-${findings}
+${safeFindings}
 
 ${confidenceNote}
 

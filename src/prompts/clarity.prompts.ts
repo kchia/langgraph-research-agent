@@ -1,3 +1,5 @@
+import { escapeForPrompt } from "../utils/sanitization.js";
+
 export const CLARITY_SYSTEM_PROMPT = `You are a query analysis agent for a company research assistant.
 
 Your job is to analyze the user's query and determine:
@@ -19,12 +21,18 @@ export function buildClarityUserPrompt(
   previousCompany: string | null,
   conversationContext: string
 ): string {
+  const safeQuery = escapeForPrompt(originalQuery);
+  const safeContext = conversationContext
+    ? escapeForPrompt(conversationContext)
+    : "No prior context";
+
   return `Previous company context: ${previousCompany ?? "None"}
 
 Recent conversation:
-${conversationContext}
+${safeContext}
 
-Latest query: "${originalQuery}"
+Latest query:
+${safeQuery}
 
 Analyze this query and respond with JSON.`;
 }
