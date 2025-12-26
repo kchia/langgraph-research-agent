@@ -1,6 +1,8 @@
 import { interrupt } from "@langchain/langgraph";
 import { HumanMessage } from "@langchain/core/messages";
 import type { ResearchState } from "../graph/state.js";
+import type { ClarificationInterruptPayload } from "../types/interrupt.js";
+import { validateClarificationResponse } from "../types/interrupt.js";
 
 /**
  * Interrupt node that pauses for user clarification.
@@ -23,8 +25,8 @@ export async function clarificationInterrupt(
   // Do NOT put API calls, DB writes, or any side effects here!
   // ═══════════════════════════════════════════════════════════════════════
 
-  const interruptPayload = {
-    type: "clarification_needed" as const,
+  const interruptPayload: ClarificationInterruptPayload = {
+    type: "clarification_needed",
     question:
       state.clarificationQuestion ?? "Which company are you asking about?",
     originalQuery: state.originalQuery,
@@ -39,9 +41,13 @@ export async function clarificationInterrupt(
   // SAFE ZONE: This code ONLY runs after resume
   // ═══════════════════════════════════════════════════════════════════════
 
+  // Validate and extract the clarification response
+  const clarification = validateClarificationResponse(userResponse);
+
+  // DO NOT overwrite originalQuery - preserve research context
   return {
-    messages: [new HumanMessage(userResponse as string)],
-    originalQuery: userResponse as string,
+    messages: [new HumanMessage(clarification)],
+    clarificationResponse: clarification,
     clarityStatus: "pending",
     currentAgent: "interrupt"
   };

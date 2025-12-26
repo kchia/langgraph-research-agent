@@ -17,6 +17,7 @@ export function createNewQueryInput(query: string): Partial<ResearchState> {
     clarityStatus: "pending",
     clarificationAttempts: 0,
     clarificationQuestion: null,
+    clarificationResponse: null,
     researchFindings: null,
     confidenceScore: 0,
     researchAttempts: 0,

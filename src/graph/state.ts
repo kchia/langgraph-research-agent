@@ -103,6 +103,15 @@ export const ResearchStateAnnotation = Annotation.Root({
   }),
 
   /**
+   * User's response to clarification request.
+   * Separate from originalQuery to preserve research context.
+   */
+  clarificationResponse: Annotation<string | null>({
+    reducer: (_, update) => update,
+    default: () => null
+  }),
+
+  /**
    * Extracted/normalized company name from user query.
    * Persisted across turns for follow-up question context.
    */
