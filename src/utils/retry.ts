@@ -1,3 +1,4 @@
+import pRetry, { AbortError } from "p-retry";
 import { Logger } from "./logger.js";
 
 const logger = new Logger("retry");
@@ -18,6 +19,7 @@ const DEFAULT_CONFIG: RetryConfig = {
 
 /**
  * Execute a function with automatic retry and exponential backoff.
+ * Uses p-retry for battle-tested retry logic with jitter.
  *
  * @param fn - The async function to execute
  * @param isRetryable - Function to determine if an error should trigger a retry
@@ -31,38 +33,39 @@ export async function withRetry<T>(
   config: Partial<RetryConfig> = {}
 ): Promise<T> {
   const opts = { ...DEFAULT_CONFIG, ...config };
-  let lastError: unknown;
-  let delay = opts.baseDelayMs;
 
-  for (let attempt = 1; attempt <= opts.maxRetries + 1; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error;
-      const shouldRetry = attempt <= opts.maxRetries && isRetryable(error);
-
-      logger.warn("Operation failed", {
-        attempt,
-        maxRetries: opts.maxRetries,
-        willRetry: shouldRetry,
-        nextDelayMs: shouldRetry ? delay : null,
-        error: error instanceof Error ? error.message : String(error)
-      });
-
-      if (!shouldRetry) {
+  return pRetry(
+    async () => {
+      try {
+        return await fn();
+      } catch (error) {
+        // If error is not retryable, abort immediately
+        if (!isRetryable(error)) {
+          throw new AbortError(
+            error instanceof Error ? error.message : String(error)
+          );
+        }
         throw error;
       }
-
-      await sleep(delay);
-      delay = Math.min(delay * opts.backoffMultiplier, opts.maxDelayMs);
+    },
+    {
+      retries: opts.maxRetries,
+      minTimeout: opts.baseDelayMs,
+      maxTimeout: opts.maxDelayMs,
+      factor: opts.backoffMultiplier,
+      // p-retry adds jitter by default, which prevents thundering herd
+      onFailedAttempt: (failedAttemptError) => {
+        logger.warn("Operation failed", {
+          attempt: failedAttemptError.attemptNumber,
+          retriesLeft: failedAttemptError.retriesLeft,
+          error:
+            failedAttemptError instanceof Error
+              ? failedAttemptError.message
+              : String(failedAttemptError)
+        });
+      }
     }
-  }
-
-  throw lastError;
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  );
 }
 
 /**
@@ -113,10 +116,7 @@ export const retryPredicates = {
    */
   isServerError: (error: unknown): boolean => {
     if (error instanceof Error) {
-      return (
-        error.message.includes("502") ||
-        error.message.includes("503")
-      );
+      return error.message.includes("502") || error.message.includes("503");
     }
     return false;
   },
