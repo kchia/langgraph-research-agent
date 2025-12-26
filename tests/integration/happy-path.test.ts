@@ -27,7 +27,7 @@ describe("Happy Path Integration", () => {
         config
       );
 
-      expect(result.__interrupt__).toBeUndefined();
+      expect((result as any).__interrupt__).toBeUndefined();
       expect(result.clarityStatus).toBe("clear");
       expect(result.detectedCompany).toMatch(/apple/i);
       expect(result.finalSummary).toBeDefined();
@@ -54,11 +54,13 @@ describe("Happy Path Integration", () => {
     it("should handle unknown company gracefully", async () => {
       const config = { configurable: { thread_id: crypto.randomUUID() } };
 
-      // This uses stubs which always return Apple, so we test the flow
+      // Simulate a scenario where clarification was already attempted
+      // This tests graceful handling after clarification attempts are exhausted
       const result = await graph.invoke(
         {
           messages: [new HumanMessage("Tell me about some company")],
-          originalQuery: "Tell me about some company"
+          originalQuery: "Tell me about some company",
+          clarificationAttempts: 1 // Simulate that clarification was already attempted
         },
         config
       );

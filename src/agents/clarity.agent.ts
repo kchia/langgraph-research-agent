@@ -180,7 +180,33 @@ export function createClarityAgent(llm?: BaseChatModel) {
           clarificationQuestion: null,
           currentAgent: "clarity"
         };
+      } else if (response.detected_company) {
+        // Company detected but query not fully clear - proceed anyway
+        const normalizedCompany = normalizeCompanyName(
+          response.detected_company
+        );
+        return {
+          clarityStatus: "clear",
+          detectedCompany: normalizedCompany,
+          clarificationQuestion: null,
+          currentAgent: "clarity"
+        };
       } else {
+        // No company detected
+        // If we've already tried clarification, proceed gracefully
+        // Otherwise, ask for clarification first
+        if (state.clarificationAttempts > 0) {
+          logger.info(
+            "No company detected after clarification attempt, proceeding gracefully"
+          );
+          return {
+            clarityStatus: "clear",
+            detectedCompany: null,
+            clarificationQuestion: null,
+            currentAgent: "clarity"
+          };
+        }
+        // First attempt - ask for clarification
         return {
           clarityStatus: "needs_clarification",
           clarificationQuestion:
@@ -204,6 +230,19 @@ export function createClarityAgent(llm?: BaseChatModel) {
         };
       }
 
+      // If no company can be extracted and we've already tried clarification, proceed gracefully
+      // Otherwise, ask for clarification
+      if (state.clarificationAttempts > 0) {
+        logger.warn(
+          "No company detected after clarification attempt, proceeding gracefully"
+        );
+        return {
+          clarityStatus: "clear",
+          detectedCompany: null,
+          currentAgent: "clarity"
+        };
+      }
+      // First attempt - ask for clarification
       return {
         clarityStatus: "needs_clarification",
         clarificationQuestion:
