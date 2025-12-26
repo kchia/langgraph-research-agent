@@ -7,6 +7,7 @@ import type {
 import { DataSourceError } from "./data-source.interface.js";
 import type { ResearchFindings } from "../graph/state.js";
 import { Logger } from "../utils/logger.js";
+import { withRetry } from "../utils/retry.js";
 
 const logger = new Logger("tavily-source");
 
@@ -56,16 +57,20 @@ export class TavilyDataSource implements ResearchDataSource {
       );
     }
 
-    try {
-      const query = this.buildSearchQuery(company, context);
-      logger.info("Tavily search started", {
-        company,
-        query,
-        attempt: context.attemptNumber
-      });
+    const query = this.buildSearchQuery(company, context);
+    logger.info("Tavily search started", {
+      company,
+      query,
+      attempt: context.attemptNumber
+    });
 
-      // TavilySearch expects { query: string }
-      const rawResult = await this.getTool().invoke({ query });
+    try {
+      // Use withRetry for automatic retry with exponential backoff
+      const rawResult = await withRetry(
+        async () => this.getTool().invoke({ query }),
+        (error) => this.isRetryableError(error),
+        { maxRetries: 2, baseDelayMs: 1000 }
+      );
 
       logger.info("Tavily search completed", {
         company,
@@ -82,7 +87,10 @@ export class TavilyDataSource implements ResearchDataSource {
         rawResponse: rawResult
       };
     } catch (error) {
-      logger.error("Tavily search failed", { company, error: String(error) });
+      logger.error("Tavily search failed after retries", {
+        company,
+        error: String(error)
+      });
 
       const isRetryable = this.isRetryableError(error);
       throw new DataSourceError(
