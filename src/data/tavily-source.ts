@@ -8,7 +8,8 @@ import type {
 import { DataSourceError } from "./data-source.interface.js";
 import type { ResearchFindings } from "../graph/state.js";
 import { Logger } from "../utils/logger.js";
-import { withRetry } from "../utils/retry.js";
+import { isRetryableError } from "../utils/retry.js";
+import { tavilyCircuitBreaker } from "../utils/resilience.js";
 
 const logger = new Logger("tavily-source");
 
@@ -105,12 +106,11 @@ export class TavilyDataSource implements ResearchDataSource {
     });
 
     try {
-      // Use withRetry for automatic retry with exponential backoff
-      const rawResult = await withRetry(
-        async () => this.getTool().invoke({ query }),
-        (error) => this.isRetryableError(error),
-        { maxRetries: 2, baseDelayMs: 1000 }
-      );
+      // Use circuit breaker for resilience against sustained failures
+      // Circuit opens after 5 consecutive failures, preventing cascade
+      const rawResult = await tavilyCircuitBreaker.execute(async () => {
+        return this.getTool().invoke({ query });
+      });
 
       logger.info("Tavily search completed", {
         company,
@@ -127,18 +127,28 @@ export class TavilyDataSource implements ResearchDataSource {
         rawResponse: rawResult
       };
     } catch (error) {
-      logger.error("Tavily search failed after retries", {
-        company,
-        error: String(error)
-      });
+      // Check if circuit is open (fast-fail)
+      const isCircuitOpen =
+        error instanceof Error && error.message.includes("circuit is open");
 
-      const isRetryable = this.isRetryableError(error);
+      if (isCircuitOpen) {
+        logger.warn("Tavily circuit breaker is open, failing fast", {
+          company
+        });
+      } else {
+        logger.error("Tavily search failed", {
+          company,
+          error: String(error)
+        });
+      }
+
+      const retryable = isRetryableError(error);
       throw new DataSourceError(
-        `Tavily search failed: ${
-          error instanceof Error ? error.message : "Unknown"
-        }`,
+        isCircuitOpen
+          ? "Tavily service temporarily unavailable (circuit breaker open)"
+          : `Tavily search failed: ${error instanceof Error ? error.message : "Unknown"}`,
         this.getName(),
-        isRetryable,
+        retryable,
         error instanceof Error ? error : undefined
       );
     }
@@ -268,15 +278,5 @@ export class TavilyDataSource implements ResearchDataSource {
     return Math.min(10, score);
   }
 
-  private isRetryableError(error: unknown): boolean {
-    if (!(error instanceof Error)) return false;
-    const msg = error.message.toLowerCase();
-
-    if (msg.includes("rate limit") || msg.includes("429")) return true;
-    if (msg.includes("timeout") || msg.includes("etimedout")) return true;
-    if (msg.includes("500") || msg.includes("502") || msg.includes("503"))
-      return true;
-
-    return false;
-  }
+  // isRetryableError is imported from retry.ts - single source of truth
 }
