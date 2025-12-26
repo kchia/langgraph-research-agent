@@ -1,4 +1,5 @@
-import { StateGraph, START, END, MemorySaver } from "@langchain/langgraph";
+import { StateGraph, START, END } from "@langchain/langgraph";
+import type { BaseCheckpointSaver } from "@langchain/langgraph";
 import { ResearchStateAnnotation } from "./state.js";
 import { clarityRouter, researchRouter, validationRouter } from "./routers.js";
 import {
@@ -21,8 +22,12 @@ import {
  *         validator → [research (retry) OR synthesis]
  *         synthesis → END
  */
-export function buildResearchGraph() {
-  const workflow = new StateGraph(ResearchStateAnnotation)
+/**
+ * Build the research workflow graph (uncompiled).
+ * Use compileResearchGraph() to get a compiled graph with checkpointing.
+ */
+export function buildResearchWorkflow() {
+  return new StateGraph(ResearchStateAnnotation)
     // ─── Node Definitions ───
     .addNode("clarity", clarityAgent)
     .addNode("interrupt", clarificationInterrupt)
@@ -57,10 +62,26 @@ export function buildResearchGraph() {
 
     // ─── Synthesis Terminal Edge ───
     .addEdge("synthesis", END);
+}
 
-  // Compile with checkpointer for state persistence
-  const checkpointer = new MemorySaver();
+/**
+ * Compile the research workflow with a checkpointer.
+ *
+ * @param checkpointer - Checkpointer for state persistence (required)
+ */
+export function compileResearchGraph(checkpointer: BaseCheckpointSaver) {
+  const workflow = buildResearchWorkflow();
   return workflow.compile({ checkpointer });
+}
+
+/**
+ * Backward-compatible function that builds and compiles the graph.
+ * Uses the provided checkpointer for state persistence.
+ *
+ * @deprecated Use compileResearchGraph() with explicit checkpointer instead
+ */
+export function buildResearchGraph(checkpointer: BaseCheckpointSaver) {
+  return compileResearchGraph(checkpointer);
 }
 
 export type ResearchGraph = ReturnType<typeof buildResearchGraph>;

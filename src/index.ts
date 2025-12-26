@@ -5,7 +5,7 @@ import "./utils/config.js";
 import * as readline from "readline/promises";
 import { stdin as input, stdout as output } from "process";
 import { Command } from "@langchain/langgraph";
-import { buildResearchGraph } from "./graph/workflow.js";
+import { compileResearchGraph } from "./graph/workflow.js";
 import { createNewQueryInput } from "./utils/state-helpers.js";
 import { loadConfig, validateConfig } from "./utils/config.js";
 import { Logger } from "./utils/logger.js";
@@ -13,6 +13,10 @@ import {
   streamWithInterruptSupport,
   displayProgress
 } from "./utils/streaming.js";
+import {
+  createCheckpointer,
+  getCheckpointerConfigFromEnv
+} from "./utils/checkpointer-factory.js";
 
 const logger = new Logger("cli");
 
@@ -26,8 +30,12 @@ async function main() {
     process.exit(1);
   }
 
-  // Build graph
-  const graph = buildResearchGraph();
+  // Create checkpointer based on configuration
+  const checkpointerConfig = getCheckpointerConfigFromEnv();
+  const checkpointer = await createCheckpointer(checkpointerConfig);
+
+  // Build and compile graph with checkpointer
+  const graph = compileResearchGraph(checkpointer);
   const threadId = crypto.randomUUID();
   const graphConfig = { configurable: { thread_id: threadId } };
 
