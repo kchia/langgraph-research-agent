@@ -43,7 +43,7 @@ function normalizeCompanyName(company: string | null): string | null {
     meta: "Meta Platforms, Inc.",
     facebook: "Meta Platforms, Inc.",
     nvidia: "NVIDIA Corporation",
-    netflix: "Netflix, Inc.",
+    netflix: "Netflix, Inc."
   };
 
   // Check exact match first
@@ -64,7 +64,11 @@ function normalizeCompanyName(company: string | null): string | null {
 
   // Check partial matches (e.g., "Apple" -> "Apple Inc.")
   for (const [key, value] of Object.entries(companyMap)) {
-    if (lower === key || lower.startsWith(key + " ") || lower.endsWith(" " + key)) {
+    if (
+      lower === key ||
+      lower.startsWith(key + " ") ||
+      lower.endsWith(" " + key)
+    ) {
       return value;
     }
   }
@@ -80,7 +84,9 @@ export function createClarityAgent(llm?: BaseChatModel) {
   const model = llm ?? new ChatAnthropic({ model: "claude-sonnet-4-20250514" });
   // Type assertion needed because BaseChatModel is a union type and TypeScript
   // cannot determine which withStructuredOutput signature to use
-  const structuredModel = (model as ChatAnthropic).withStructuredOutput(ClarityOutputSchema);
+  const structuredModel = (model as ChatAnthropic).withStructuredOutput(
+    ClarityOutputSchema
+  );
 
   return async function clarityAgent(
     state: ResearchState
@@ -165,7 +171,9 @@ export function createClarityAgent(llm?: BaseChatModel) {
       });
 
       if (response.is_clear && response.detected_company) {
-        const normalizedCompany = normalizeCompanyName(response.detected_company);
+        const normalizedCompany = normalizeCompanyName(
+          response.detected_company
+        );
         return {
           clarityStatus: "clear",
           detectedCompany: normalizedCompany,
