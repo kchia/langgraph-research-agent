@@ -9,6 +9,10 @@ import { buildResearchGraph } from "./graph/workflow.js";
 import { createNewQueryInput } from "./utils/state-helpers.js";
 import { loadConfig, validateConfig } from "./utils/config.js";
 import { Logger } from "./utils/logger.js";
+import {
+  streamWithInterruptSupport,
+  displayProgress
+} from "./utils/streaming.js";
 
 const logger = new Logger("cli");
 
@@ -56,15 +60,17 @@ async function main() {
       }
 
       try {
-        let result = await graph.invoke(
-          createNewQueryInput(trimmedInput),
-          graphConfig
-        );
+        let { result, interrupted, interruptData } =
+          await streamWithInterruptSupport(
+            graph,
+            createNewQueryInput(trimmedInput),
+            graphConfig,
+            displayProgress
+          );
 
         // Handle interrupt loop
-        while ((result as any).__interrupt__) {
-          const interruptData = (result as any).__interrupt__[0].value;
-          console.log(`\n${interruptData.question}`);
+        while (interrupted) {
+          console.log(`\n${interruptData?.question}`);
 
           const clarification = await rl.question("You: ");
           const trimmedClarification = clarification.trim();
@@ -75,10 +81,13 @@ async function main() {
             return;
           }
 
-          result = await graph.invoke(
-            new Command({ resume: trimmedClarification }),
-            graphConfig
-          );
+          ({ result, interrupted, interruptData } =
+            await streamWithInterruptSupport(
+              graph,
+              new Command({ resume: trimmedClarification }),
+              graphConfig,
+              displayProgress
+            ));
         }
 
         // Display result
