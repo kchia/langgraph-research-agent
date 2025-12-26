@@ -10,9 +10,3 @@ export const MAX_RESEARCH_ATTEMPTS = 3;
 
 /** Maximum clarification attempts before forced proceed */
 export const MAX_CLARIFICATION_ATTEMPTS = 2;
-
-/** Message count threshold for triggering conversation summarization */
-export const MESSAGE_SUMMARIZATION_THRESHOLD = 10;
-
-/** Number of recent messages to keep when summarizing */
-export const MESSAGES_TO_KEEP_AFTER_SUMMARY = 4;

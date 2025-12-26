@@ -63,15 +63,6 @@ export const ResearchStateAnnotation = Annotation.Root({
     default: () => []
   }),
 
-  /**
-   * Condensed summary of older messages for long conversations.
-   * Used when message count exceeds threshold (Beyond Feature).
-   */
-  conversationSummary: Annotation<string | null>({
-    reducer: (_, update) => update,
-    default: () => null
-  }),
-
   // ─── Query Analysis ───
   /**
    * The user's original query text, extracted from the latest HumanMessage.
