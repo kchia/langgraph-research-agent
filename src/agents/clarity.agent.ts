@@ -77,7 +77,12 @@ function normalizeCompanyName(company: string | null): string | null {
  * Factory function to create Clarity Agent with injectable LLM.
  */
 export function createClarityAgent(llm?: BaseChatModel) {
-  const model = llm ?? new ChatAnthropic({ model: "claude-sonnet-4-20250514" });
+  const model =
+    llm ??
+    new ChatAnthropic({
+      model: "claude-sonnet-4-20250514",
+      anthropicApiKey: process.env.ANTHROPIC_API_KEY
+    });
   // Type assertion needed because BaseChatModel is a union type and TypeScript
   // cannot determine which withStructuredOutput signature to use
   const structuredModel = (model as ChatAnthropic).withStructuredOutput(

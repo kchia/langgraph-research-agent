@@ -15,7 +15,12 @@ const logger = new Logger("synthesis-agent");
  * Factory function to create Synthesis Agent with injectable LLM.
  */
 export function createSynthesisAgent(llm?: BaseChatModel) {
-  const model = llm ?? new ChatAnthropic({ model: "claude-sonnet-4-20250514" });
+  const model =
+    llm ??
+    new ChatAnthropic({
+      model: "claude-sonnet-4-20250514",
+      anthropicApiKey: process.env.ANTHROPIC_API_KEY
+    });
 
   return async function synthesisAgent(
     state: ResearchState

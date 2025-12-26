@@ -22,7 +22,12 @@ type ValidatorOutput = z.infer<typeof ValidatorOutputSchema>;
  * Factory function to create Validator Agent with injectable LLM.
  */
 export function createValidatorAgent(llm?: BaseChatModel) {
-  const model = llm ?? new ChatAnthropic({ model: "claude-sonnet-4-20250514" });
+  const model =
+    llm ??
+    new ChatAnthropic({
+      model: "claude-sonnet-4-20250514",
+      anthropicApiKey: process.env.ANTHROPIC_API_KEY
+    });
   const structuredModel = (model as ChatAnthropic).withStructuredOutput(ValidatorOutputSchema);
 
   return async function validatorAgent(
