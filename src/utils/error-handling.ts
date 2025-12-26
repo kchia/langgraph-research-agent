@@ -1,5 +1,6 @@
 import type { ResearchState, ErrorContext } from "../graph/state.js";
 import { Logger } from "./logger.js";
+import { isRetryableError } from "./retry.js";
 
 const logger = new Logger("error-handling");
 
@@ -43,25 +44,4 @@ export function withErrorHandling<T extends ResearchState>(
   };
 }
 
-/**
- * Determines if an error is retryable.
- *
- * @param error - The error to check
- * @returns True if the error is likely retryable
- */
-function isRetryableError(error: unknown): boolean {
-  if (error instanceof Error) {
-    const message = error.message.toLowerCase();
-    // Network errors, timeouts, rate limits are usually retryable
-    return (
-      message.includes("timeout") ||
-      message.includes("network") ||
-      message.includes("rate limit") ||
-      message.includes("429") ||
-      message.includes("503") ||
-      message.includes("502")
-    );
-  }
-  // Unknown errors are not retryable by default
-  return false;
-}
+// isRetryableError is imported from retry.ts - single source of truth

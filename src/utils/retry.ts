@@ -67,6 +67,7 @@ function sleep(ms: number): Promise<void> {
 
 /**
  * Common retry predicates for convenience.
+ * Single source of truth for retryable error detection.
  */
 export const retryPredicates = {
   /**
@@ -98,12 +99,48 @@ export const retryPredicates = {
   },
 
   /**
-   * Retry on any transient error (rate limit or network).
+   * Retry on timeout errors.
+   */
+  isTimeoutError: (error: unknown): boolean => {
+    if (error instanceof Error) {
+      return error.message.toLowerCase().includes("timeout");
+    }
+    return false;
+  },
+
+  /**
+   * Retry on server errors (502, 503).
+   */
+  isServerError: (error: unknown): boolean => {
+    if (error instanceof Error) {
+      return (
+        error.message.includes("502") ||
+        error.message.includes("503")
+      );
+    }
+    return false;
+  },
+
+  /**
+   * Retry on any transient error (rate limit, network, timeout, or server error).
    */
   isTransientError: (error: unknown): boolean => {
     return (
       retryPredicates.isRateLimitError(error) ||
-      retryPredicates.isNetworkError(error)
+      retryPredicates.isNetworkError(error) ||
+      retryPredicates.isTimeoutError(error) ||
+      retryPredicates.isServerError(error)
     );
   }
 };
+
+/**
+ * Determines if an error is retryable.
+ * Unified function used by both retry logic and error handling.
+ *
+ * @param error - The error to check
+ * @returns True if the error is likely retryable
+ */
+export function isRetryableError(error: unknown): boolean {
+  return retryPredicates.isTransientError(error);
+}
