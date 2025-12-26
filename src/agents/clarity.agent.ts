@@ -10,6 +10,7 @@ import {
 } from "../prompts/clarity.prompts.js";
 import { Logger } from "../utils/logger.js";
 import { getLLM } from "../utils/llm-factory.js";
+import { TokenBudget } from "../utils/token-budget.js";
 
 const logger = new Logger("clarity-agent");
 
@@ -146,9 +147,20 @@ export function createClarityAgent(llm?: BaseChatModel) {
 
     // Use LLM for analysis
     try {
-      const conversationContext = state.messages
-        .slice(-6)
-        .map((m) => `${m._getType()}: ${m.content}`)
+      // Use token budget for context selection instead of arbitrary slice
+      const budget = new TokenBudget();
+      const maxContextTokens = 4000;
+
+      const recentMessages = budget.selectMessagesWithinBudget(
+        state.messages.map((m) => ({
+          content: `${m._getType()}: ${m.content}`,
+          original: m
+        })),
+        maxContextTokens
+      );
+
+      const conversationContext = recentMessages
+        .map((m) => m.content)
         .join("\n");
 
       const response: ClarityOutput = await structuredModel.invoke([
