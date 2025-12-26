@@ -1,5 +1,4 @@
-import { Annotation } from "@langchain/langgraph";
-import { BaseMessage } from "@langchain/core/messages";
+import { Annotation, MessagesAnnotation } from "@langchain/langgraph";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPE DEFINITIONS
@@ -56,12 +55,10 @@ export const ResearchStateAnnotation = Annotation.Root({
   // ─── Conversation ───
   /**
    * Full conversation history for multi-turn support.
-   * Uses append reducer to accumulate messages across turns.
+   * Uses LangGraph's battle-tested MessagesAnnotation with proper
+   * message ID handling, deduplication, and removal support.
    */
-  messages: Annotation<BaseMessage[]>({
-    reducer: (current, update) => [...current, ...update],
-    default: () => []
-  }),
+  ...MessagesAnnotation.spec,
 
   // ─── Query Analysis ───
   /**
