@@ -19,7 +19,9 @@ describe("Full Workflow Integration", () => {
   });
 
   describe("Multi-Turn Conversation with Clarification", () => {
-    it("should handle: vague query → clarification → research → follow-up", async () => {
+    it(
+      "should handle: vague query → clarification → research → follow-up",
+      async () => {
       const config = { configurable: { thread_id: "full-workflow-clarify" } };
 
       // Turn 1: Vague query that triggers clarification
@@ -70,7 +72,9 @@ describe("Full Workflow Integration", () => {
       );
       // Should have: original vague query + clarification + follow-up
       expect(humanMessages.length).toBeGreaterThanOrEqual(3);
-    });
+      },
+      120000 // Longer timeout for multi-turn with real API calls
+    );
   });
 
   describe("Validation Retry Loop", () => {

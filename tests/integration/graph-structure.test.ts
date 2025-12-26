@@ -137,6 +137,6 @@ describe("Graph Structure", () => {
         (m) => m._getType() === "human"
       );
       expect(humanMessages.length).toBe(1);
-    });
+    }, 120000); // Longer timeout for multiple thread invocations with real API calls
   });
 });
