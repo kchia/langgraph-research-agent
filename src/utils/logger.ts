@@ -9,12 +9,10 @@ const LOG_LEVELS: Record<LogLevel, number> = {
 
 /**
  * Generate a unique correlation ID for request tracking.
- * Uses a combination of timestamp and random string for uniqueness.
+ * Uses crypto.randomUUID for guaranteed uniqueness and cryptographic security.
  */
 export function generateCorrelationId(): string {
-  const timestamp = Date.now().toString(36);
-  const random = Math.random().toString(36).substring(2, 9);
-  return `${timestamp}-${random}`;
+  return crypto.randomUUID();
 }
 
 /**
