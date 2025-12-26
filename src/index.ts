@@ -17,8 +17,12 @@ import {
   createCheckpointer,
   getCheckpointerConfigFromEnv
 } from "./utils/checkpointer-factory.js";
+import { streamWithTokens } from "./utils/token-streaming.js";
 
 const logger = new Logger("cli");
+
+// Check for --stream-tokens flag
+const useTokenStreaming = process.argv.includes("--stream-tokens");
 
 async function main() {
   // Load and validate config
@@ -45,7 +49,12 @@ async function main() {
   console.log("╔════════════════════════════════════════════╗");
   console.log("║       Research Assistant                   ║");
   console.log("║  Type 'quit' to exit, 'new' for new thread ║");
-  console.log("╚════════════════════════════════════════════╝\n");
+  console.log("╚════════════════════════════════════════════╝");
+  if (useTokenStreaming) {
+    console.log("Token streaming mode enabled\n");
+  } else {
+    console.log("\n");
+  }
 
   try {
     while (true) {
@@ -68,13 +77,37 @@ async function main() {
       }
 
       try {
-        let { result, interrupted, interruptData } =
-          await streamWithInterruptSupport(
+        let result: Record<string, unknown>;
+        let interrupted: boolean;
+        let interruptData: { question?: string } | undefined;
+
+        if (useTokenStreaming) {
+          // Token streaming mode - real-time LLM output
+          ({ result, interrupted, interruptData } = await streamWithTokens(
+            graph,
+            createNewQueryInput(trimmedInput),
+            graphConfig,
+            {
+              onNodeStart: (node) => {
+                console.log(`\n[${node}] `);
+              },
+              onToken: (token) => {
+                process.stdout.write(token);
+              }
+            }
+          ));
+        } else {
+          // Standard streaming mode
+          const streamResult = await streamWithInterruptSupport(
             graph,
             createNewQueryInput(trimmedInput),
             graphConfig,
             displayProgress
           );
+          result = streamResult.result as Record<string, unknown>;
+          interrupted = streamResult.interrupted;
+          interruptData = streamResult.interruptData;
+        }
 
         // Handle interrupt loop
         while (interrupted) {
@@ -89,20 +122,43 @@ async function main() {
             return;
           }
 
-          ({ result, interrupted, interruptData } =
-            await streamWithInterruptSupport(
+          if (useTokenStreaming) {
+            ({ result, interrupted, interruptData } = await streamWithTokens(
+              graph,
+              new Command({ resume: trimmedClarification }),
+              graphConfig,
+              {
+                onNodeStart: (node) => {
+                  console.log(`\n[${node}] `);
+                },
+                onToken: (token) => {
+                  process.stdout.write(token);
+                }
+              }
+            ));
+          } else {
+            const streamResult = await streamWithInterruptSupport(
               graph,
               new Command({ resume: trimmedClarification }),
               graphConfig,
               displayProgress
-            ));
+            );
+            result = streamResult.result as Record<string, unknown>;
+            interrupted = streamResult.interrupted;
+            interruptData = streamResult.interruptData;
+          }
         }
 
-        // Display result
-        if (result.finalSummary) {
-          console.log(`\nAssistant:\n${result.finalSummary}\n`);
+        // Display result (only for non-streaming mode - streaming shows inline)
+        if (!useTokenStreaming) {
+          const finalSummary = result.finalSummary as string | null;
+          if (finalSummary) {
+            console.log(`\nAssistant:\n${finalSummary}\n`);
+          } else {
+            console.log("\nNo summary generated.\n");
+          }
         } else {
-          console.log("\nNo summary generated.\n");
+          console.log("\n"); // Just add a newline after streaming
         }
       } catch (error) {
         logger.error("Graph execution failed", { error: String(error) });
