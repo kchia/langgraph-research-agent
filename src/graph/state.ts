@@ -70,15 +70,34 @@ export const ErrorContextSchema = z.object({
 export type ErrorContext = z.infer<typeof ErrorContextSchema>;
 
 // ═══════════════════════════════════════════════════════════════════════════
+// REDUCER HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Default "last write wins" reducer.
+ * Updates replace the previous value entirely.
+ */
+const lastWriteWins = <T>(_: T, update: T): T => update;
+
+// ═══════════════════════════════════════════════════════════════════════════
 // STATE ANNOTATION
 // ═══════════════════════════════════════════════════════════════════════════
 
+/**
+ * LangGraph State Annotation for the Research Assistant.
+ *
+ * All fields use the "last write wins" reducer unless otherwise noted.
+ * This means updates replace the previous value entirely.
+ * Only MessagesAnnotation uses a custom reducer for message merging.
+ */
 export const ResearchStateAnnotation = Annotation.Root({
   // ─── Conversation ───
   /**
    * Full conversation history for multi-turn support.
    * Uses LangGraph's battle-tested MessagesAnnotation with proper
    * message ID handling, deduplication, and removal support.
+   *
+   * NOTE: This is the only field with a custom reducer (message merging).
    */
   ...MessagesAnnotation.spec,
 
@@ -88,7 +107,7 @@ export const ResearchStateAnnotation = Annotation.Root({
    * Null if no summarization has been performed yet.
    */
   conversationSummary: Annotation<string | null>({
-    reducer: (_, update) => update,
+    reducer: lastWriteWins,
     default: () => null
   }),
 
@@ -98,7 +117,7 @@ export const ResearchStateAnnotation = Annotation.Root({
    * Preserved separately for clarity analysis even as messages grow.
    */
   originalQuery: Annotation<string>({
-    reducer: (_, update) => update,
+    reducer: lastWriteWins,
     default: () => ""
   }),
 
@@ -109,7 +128,7 @@ export const ResearchStateAnnotation = Annotation.Root({
    * - "needs_clarification": Query is ambiguous, interrupt required
    */
   clarityStatus: Annotation<ClarityStatus>({
-    reducer: (_, update) => update,
+    reducer: lastWriteWins,
     default: () => "pending"
   }),
 
@@ -127,7 +146,7 @@ export const ResearchStateAnnotation = Annotation.Root({
    * 5. After resume, Clarity Agent runs again and can increment again if needed
    */
   clarificationAttempts: Annotation<number>({
-    reducer: (_, update) => update,
+    reducer: lastWriteWins,
     default: () => 0
   }),
 
@@ -136,7 +155,7 @@ export const ResearchStateAnnotation = Annotation.Root({
    * Set by Clarity Agent, consumed by Interrupt node.
    */
   clarificationQuestion: Annotation<string | null>({
-    reducer: (_, update) => update,
+    reducer: lastWriteWins,
     default: () => null
   }),
 
@@ -145,7 +164,7 @@ export const ResearchStateAnnotation = Annotation.Root({
    * Separate from originalQuery to preserve research context.
    */
   clarificationResponse: Annotation<string | null>({
-    reducer: (_, update) => update,
+    reducer: lastWriteWins,
     default: () => null
   }),
 
@@ -181,7 +200,7 @@ export const ResearchStateAnnotation = Annotation.Root({
    * to repeat the company name in every message.
    */
   detectedCompany: Annotation<string | null>({
-    reducer: (_, update) => update,
+    reducer: lastWriteWins,
     default: () => null
   }),
 
@@ -191,7 +210,7 @@ export const ResearchStateAnnotation = Annotation.Root({
    * Null if research hasn't run or found no data.
    */
   researchFindings: Annotation<ResearchFindings | null>({
-    reducer: (_, update) => update,
+    reducer: lastWriteWins,
     default: () => null
   }),
 
@@ -202,7 +221,7 @@ export const ResearchStateAnnotation = Annotation.Root({
    * - 9-10: High confidence
    */
   confidenceScore: Annotation<number>({
-    reducer: (_, update) => update,
+    reducer: lastWriteWins,
     default: () => 0
   }),
 
@@ -212,7 +231,7 @@ export const ResearchStateAnnotation = Annotation.Root({
    * Max 3 attempts before forced synthesis.
    */
   researchAttempts: Annotation<number>({
-    reducer: (_, update) => update,
+    reducer: lastWriteWins,
     default: () => 0
   }),
 
@@ -224,7 +243,7 @@ export const ResearchStateAnnotation = Annotation.Root({
    * - "insufficient": Research needs improvement
    */
   validationResult: Annotation<ValidationResult>({
-    reducer: (_, update) => update,
+    reducer: lastWriteWins,
     default: () => "pending"
   }),
 
@@ -233,7 +252,7 @@ export const ResearchStateAnnotation = Annotation.Root({
    * Used by Research Agent on retry to focus search.
    */
   validationFeedback: Annotation<string | null>({
-    reducer: (_, update) => update,
+    reducer: lastWriteWins,
     default: () => null
   }),
 
@@ -243,7 +262,7 @@ export const ResearchStateAnnotation = Annotation.Root({
    * This is what gets returned to the user.
    */
   finalSummary: Annotation<string | null>({
-    reducer: (_, update) => update,
+    reducer: lastWriteWins,
     default: () => null
   }),
 
@@ -253,7 +272,7 @@ export const ResearchStateAnnotation = Annotation.Root({
    * Updated at the start of each agent.
    */
   currentAgent: Annotation<AgentName>({
-    reducer: (_, update) => update,
+    reducer: lastWriteWins,
     default: () => "clarity"
   }),
 
@@ -263,7 +282,7 @@ export const ResearchStateAnnotation = Annotation.Root({
    * Set when an unexpected error occurs in a node.
    */
   errorContext: Annotation<ErrorContext | null>({
-    reducer: (_, update) => update,
+    reducer: lastWriteWins,
     default: () => null
   }),
 
@@ -274,7 +293,7 @@ export const ResearchStateAnnotation = Annotation.Root({
    * Used to trace a single request across all graph nodes.
    */
   correlationId: Annotation<string | null>({
-    reducer: (_, update) => update,
+    reducer: lastWriteWins,
     default: () => null
   })
 });
