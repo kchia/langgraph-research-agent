@@ -26,13 +26,34 @@ describe("MockDataSource", () => {
   });
 
   describe("search", () => {
-    it("should return data for known companies", async () => {
+    it("should return partial data with low confidence on first attempt", async () => {
       const result = await source.search("Apple Inc.", baseContext);
 
       expect(result.findings).not.toBeNull();
       expect(result.findings?.company).toBe("Apple Inc.");
-      expect(result.confidence).toBeGreaterThan(6);
+      // First attempt returns partial data to trigger validation
+      expect(result.confidence).toBe(4);
+      expect(result.findings?.recentNews).not.toBeNull();
+      expect(result.findings?.stockInfo).toBeNull(); // Omitted on first attempt
+      expect(result.findings?.keyDevelopments).toBeNull(); // Omitted on first attempt
       expect(result.source).toBe("Mock Data Source");
+    });
+
+    it("should return complete data with high confidence on retry with feedback", async () => {
+      const retryContext: SearchContext = {
+        ...baseContext,
+        attemptNumber: 2,
+        validationFeedback: "Missing financial data"
+      };
+      const result = await source.search("Apple Inc.", retryContext);
+
+      expect(result.findings).not.toBeNull();
+      expect(result.findings?.company).toBe("Apple Inc.");
+      // Retry with feedback returns complete data
+      expect(result.confidence).toBeGreaterThan(6);
+      expect(result.findings?.recentNews).not.toBeNull();
+      expect(result.findings?.stockInfo).not.toBeNull();
+      expect(result.findings?.keyDevelopments).not.toBeNull();
     });
 
     it("should normalize company names correctly", async () => {
@@ -57,7 +78,7 @@ describe("MockDataSource", () => {
       expect(result.confidence).toBe(0);
     });
 
-    it("should track validation feedback in raw data", async () => {
+    it("should track validation feedback in raw data on retry", async () => {
       const contextWithFeedback: SearchContext = {
         ...baseContext,
         validationFeedback: "Missing financial data",
@@ -68,6 +89,7 @@ describe("MockDataSource", () => {
 
       expect(result.findings?.rawData.hadFeedback).toBe(true);
       expect(result.findings?.rawData.attemptNumber).toBe(2);
+      expect(result.findings?.rawData.usedFeedback).toBe("Missing financial data");
     });
 
     it("should return all 5 known companies", async () => {

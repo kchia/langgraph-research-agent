@@ -36,20 +36,51 @@ export class MockDataSource implements ResearchDataSource {
       };
     }
 
-    const findings: ResearchFindings = {
-      ...data,
-      sources: [this.getName()],
-      rawData: {
-        searchedName: company,
-        normalizedTo: normalizedName,
-        attemptNumber: context.attemptNumber,
-        hadFeedback: !!context.validationFeedback
-      }
-    };
+    // Simulate improvement on retry - first attempt returns partial data
+    // This ensures the validation loop is exercised in mock mode
+    const isRetry = context.attemptNumber > 1;
+    const hasFeedback = !!context.validationFeedback;
+
+    let findings: ResearchFindings;
+    let confidence: number;
+
+    if (isRetry && hasFeedback) {
+      // On retry with feedback: return complete data with high confidence
+      findings = {
+        ...data,
+        sources: [this.getName()],
+        rawData: {
+          searchedName: company,
+          normalizedTo: normalizedName,
+          attemptNumber: context.attemptNumber,
+          hadFeedback: true,
+          usedFeedback: context.validationFeedback
+        }
+      };
+      confidence = this.calculateConfidence(findings);
+    } else {
+      // First attempt: return partial data with lower confidence
+      // This triggers validation and demonstrates the retry loop
+      findings = {
+        company: data.company,
+        recentNews: data.recentNews,
+        stockInfo: null, // Omit on first attempt
+        keyDevelopments: null, // Omit on first attempt
+        sources: [this.getName()],
+        rawData: {
+          searchedName: company,
+          normalizedTo: normalizedName,
+          attemptNumber: context.attemptNumber,
+          hadFeedback: false,
+          partialData: true
+        }
+      };
+      confidence = 4; // Below CONFIDENCE_THRESHOLD (6), triggers validation
+    }
 
     return {
       findings,
-      confidence: this.calculateConfidence(findings),
+      confidence,
       source: this.getName(),
       rawResponse: data
     };
