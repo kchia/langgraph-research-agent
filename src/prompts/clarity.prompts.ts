@@ -19,19 +19,25 @@ Respond in JSON format:
 export function buildClarityUserPrompt(
   originalQuery: string,
   previousCompany: string | null,
-  conversationContext: string
+  conversationContext: string,
+  clarificationResponse?: string | null
 ): string {
   const safeQuery = escapeForPrompt(originalQuery);
   const safeContext = conversationContext
     ? escapeForPrompt(conversationContext)
     : "No prior context";
 
+  // Build clarification section if response exists
+  const clarificationSection = clarificationResponse
+    ? `\nUser clarification to previous question:\n${escapeForPrompt(clarificationResponse)}`
+    : "";
+
   return `Previous company context: ${previousCompany ?? "None"}
 
 Recent conversation:
 ${safeContext}
-
-Latest query:
+${clarificationSection}
+Original query:
 ${safeQuery}
 
 Analyze this query and respond with JSON.`;

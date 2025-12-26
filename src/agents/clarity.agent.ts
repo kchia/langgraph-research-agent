@@ -95,6 +95,7 @@ export function createClarityAgent(llm?: BaseChatModel) {
     logger.info("Clarity analysis started", {
       query: state.originalQuery,
       previousCompany: state.detectedCompany,
+      clarificationResponse: state.clarificationResponse,
       attempt: state.clarificationAttempts
     });
 
@@ -161,7 +162,8 @@ export function createClarityAgent(llm?: BaseChatModel) {
           content: buildClarityUserPrompt(
             state.originalQuery,
             state.detectedCompany,
-            conversationContext
+            conversationContext,
+            state.clarificationResponse
           )
         }
       ]);
