@@ -1,8 +1,10 @@
 import { z } from "zod";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
-import { ChatAnthropic } from "@langchain/anthropic";
 import type { ResearchState } from "../graph/state.js";
-import { MAX_CLARIFICATION_ATTEMPTS } from "../utils/constants.js";
+import {
+  MAX_CLARIFICATION_ATTEMPTS,
+  TOKEN_BUDGETS
+} from "../utils/constants.js";
 import { isFollowUpQuery, isCancelRequest } from "../utils/patterns.js";
 import {
   CLARITY_SYSTEM_PROMPT,
@@ -52,11 +54,8 @@ export function createClarityAgent(llm?: BaseChatModel) {
     );
   }
 
-  // After runtime check, safe to use withStructuredOutput
-  // Type assertion needed because TypeScript can't infer the exact return type
-  const structuredModel = (model as ChatAnthropic).withStructuredOutput(
-    ClarityOutputSchema
-  );
+  // After runtime check, type guard narrows to model with withStructuredOutput
+  const structuredModel = model.withStructuredOutput(ClarityOutputSchema);
 
   return async function clarityAgent(
     state: ResearchState
@@ -135,14 +134,13 @@ export function createClarityAgent(llm?: BaseChatModel) {
       }
 
       // Build conversation context using summary if available
-      const maxContextTokens = 4000;
       const conversationContext = buildConversationContext(
         state.messages,
         conversationSummary,
-        maxContextTokens
+        TOKEN_BUDGETS.clarity.context
       );
 
-      const response: ClarityOutput = await structuredModel.invoke([
+      const response = (await structuredModel.invoke([
         { role: "system", content: CLARITY_SYSTEM_PROMPT },
         {
           role: "user",
@@ -153,7 +151,7 @@ export function createClarityAgent(llm?: BaseChatModel) {
             state.clarificationResponse
           )
         }
-      ]);
+      ])) as ClarityOutput;
 
       logger.info("LLM analysis complete", {
         isClear: response.is_clear,
@@ -292,7 +290,7 @@ function handleNoCompanyDetected(
       clarityStatus: "clear",
       detectedCompany: null,
       clarificationQuestion: null,
-      currentAgent: "clarity"
+      currentAgent: AgentNames.CLARITY
     };
   }
   // First attempt - ask for clarification
@@ -301,7 +299,7 @@ function handleNoCompanyDetected(
     clarityStatus: "needs_clarification",
     clarificationQuestion,
     clarificationAttempts: clarificationAttempts + 1,
-    currentAgent: "clarity"
+    currentAgent: AgentNames.CLARITY
   };
 }
 

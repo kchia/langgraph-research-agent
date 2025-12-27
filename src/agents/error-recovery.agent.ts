@@ -2,6 +2,7 @@ import { AIMessage } from "@langchain/core/messages";
 import type { ResearchState, ErrorContext } from "../graph/state.js";
 import { createLoggerWithCorrelationId } from "../utils/logger.js";
 import { AgentNames } from "../graph/routes.js";
+import { appendFindingsToMessage } from "../utils/findings-formatter.js";
 
 /**
  * Error recovery agent that handles errors gracefully.
@@ -56,40 +57,21 @@ export async function errorRecoveryAgent(
       break;
 
     case AgentNames.VALIDATOR:
-      userMessage =
+      userMessage = appendFindingsToMessage(
         "I found some information but couldn't verify its quality. " +
-        "Here's what I found, though it may be incomplete:";
-      // Try to provide partial findings if available
-      if (state.researchFindings) {
-        const findings = state.researchFindings;
-        userMessage += `\n\n**${findings.company}**:\n`;
-        if (findings.recentNews) {
-          userMessage += `Recent News: ${findings.recentNews}\n`;
-        }
-        if (findings.stockInfo) {
-          userMessage += `Stock Info: ${findings.stockInfo}\n`;
-        }
-      }
+          "Here's what I found, though it may be incomplete:",
+        state.researchFindings,
+        false // don't include key developments for validator errors
+      );
       break;
 
     case AgentNames.SYNTHESIS:
-      userMessage =
+      userMessage = appendFindingsToMessage(
         "I found information but had trouble generating a summary. " +
-        "Here's what I found:";
-      // Try to provide raw findings if available
-      if (state.researchFindings) {
-        const findings = state.researchFindings;
-        userMessage += `\n\n**${findings.company}**:\n`;
-        if (findings.recentNews) {
-          userMessage += `Recent News: ${findings.recentNews}\n`;
-        }
-        if (findings.stockInfo) {
-          userMessage += `Stock Info: ${findings.stockInfo}\n`;
-        }
-        if (findings.keyDevelopments) {
-          userMessage += `Key Developments: ${findings.keyDevelopments}\n`;
-        }
-      }
+          "Here's what I found:",
+        state.researchFindings,
+        true // include key developments for synthesis errors
+      );
       break;
 
     default:
@@ -101,7 +83,7 @@ export async function errorRecoveryAgent(
   return {
     finalSummary: userMessage,
     messages: [new AIMessage(userMessage)],
-    currentAgent: "error-recovery",
+    currentAgent: AgentNames.ERROR_RECOVERY,
     // Clear error context after handling
     errorContext: undefined
   };

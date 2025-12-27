@@ -2,6 +2,7 @@ import type { BaseChatModel } from "@langchain/core/language_models/chat_models"
 import { AIMessage } from "@langchain/core/messages";
 import type { ResearchState } from "../graph/state.js";
 import { MAX_RESEARCH_ATTEMPTS, TOKEN_BUDGETS } from "../utils/constants.js";
+import { getConfidenceLevel } from "../utils/confidence.js";
 import {
   SYNTHESIS_SYSTEM_PROMPT,
   buildSynthesisUserPrompt
@@ -10,6 +11,10 @@ import { createLoggerWithCorrelationId } from "../utils/logger.js";
 import { getLLM } from "../utils/llm-factory.js";
 import { TokenBudget } from "../utils/token-budget.js";
 import { AgentNames } from "../graph/routes.js";
+import {
+  formatFindings,
+  formatFindingsForDisplay
+} from "../utils/findings-formatter.js";
 
 /**
  * Factory function to create Synthesis Agent with injectable LLM.
@@ -42,10 +47,12 @@ export function createSynthesisAgent(llm?: BaseChatModel) {
     }
 
     // Determine confidence level
-    const confidenceLevel = getConfidenceLevel(state);
+    const confidenceLevel = getConfidenceLevel(state.confidenceScore);
 
     // Format findings for LLM
-    let findingsText = formatFindings(state.researchFindings);
+    let findingsText = formatFindings(state.researchFindings, {
+      stockLabel: "Stock/Financial Info"
+    });
 
     // Apply token budget to findings if they're too long
     // Reserve tokens for system prompt, query, and response
@@ -115,12 +122,6 @@ export function createSynthesisAgent(llm?: BaseChatModel) {
   };
 }
 
-function getConfidenceLevel(state: ResearchState): "high" | "medium" | "low" {
-  if (state.confidenceScore >= 8) return "high";
-  if (state.confidenceScore >= 5) return "medium";
-  return "low";
-}
-
 function addConfidencePrefix(
   summary: string,
   level: "high" | "medium" | "low",
@@ -160,27 +161,7 @@ function generateFallbackSummary(state: ResearchState): string {
   const findings = state.researchFindings;
   if (!findings) return generateNoDataResponse(state);
 
-  const parts = [`Here's what I found about ${findings.company}:`];
-
-  if (findings.recentNews) {
-    parts.push(`\n**Recent News**: ${findings.recentNews}`);
-  }
-  if (findings.stockInfo) {
-    parts.push(`\n**Financial**: ${findings.stockInfo}`);
-  }
-  if (findings.keyDevelopments) {
-    parts.push(`\n**Key Developments**: ${findings.keyDevelopments}`);
-  }
-
-  return parts.join("\n");
-}
-
-function formatFindings(findings: ResearchState["researchFindings"]): string {
-  if (!findings) return "No findings";
-
-  return `Recent News: ${findings.recentNews ?? "Not available"}
-Stock/Financial Info: ${findings.stockInfo ?? "Not available"}
-Key Developments: ${findings.keyDevelopments ?? "Not available"}`;
+  return formatFindingsForDisplay(findings);
 }
 
 // Default export for graph

@@ -1,6 +1,5 @@
 import { z } from "zod";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
-import { ChatAnthropic } from "@langchain/anthropic";
 import type { ResearchState } from "../graph/state.js";
 import {
   VALIDATOR_SYSTEM_PROMPT,
@@ -11,6 +10,7 @@ import { getLLM, supportsStructuredOutput } from "../utils/llm-factory.js";
 import { TokenBudget } from "../utils/token-budget.js";
 import { TOKEN_BUDGETS } from "../utils/constants.js";
 import { AgentNames } from "../graph/routes.js";
+import { formatFindings } from "../utils/findings-formatter.js";
 
 const ValidatorOutputSchema = z.object({
   is_sufficient: z.boolean(),
@@ -36,11 +36,8 @@ export function createValidatorAgent(llm?: BaseChatModel) {
     );
   }
 
-  // After runtime check, safe to use withStructuredOutput
-  // Type assertion needed because TypeScript can't infer the exact return type
-  const structuredModel = (model as ChatAnthropic).withStructuredOutput(
-    ValidatorOutputSchema
-  );
+  // After runtime check, type guard narrows to model with withStructuredOutput
+  const structuredModel = model.withStructuredOutput(ValidatorOutputSchema);
 
   return async function validatorAgent(
     state: ResearchState
@@ -67,7 +64,10 @@ export function createValidatorAgent(llm?: BaseChatModel) {
     }
 
     // Format findings for LLM
-    let findingsText = formatFindings(state.researchFindings);
+    let findingsText = formatFindings(state.researchFindings, {
+      includeCompany: true,
+      includeSources: true
+    });
 
     // Apply token budget to findings if they're too long
     // Reserve tokens for system prompt, query, and response structure
@@ -84,7 +84,7 @@ export function createValidatorAgent(llm?: BaseChatModel) {
     }
 
     try {
-      const response: ValidatorOutput = await structuredModel.invoke([
+      const response = (await structuredModel.invoke([
         { role: "system", content: VALIDATOR_SYSTEM_PROMPT },
         {
           role: "user",
@@ -94,7 +94,7 @@ export function createValidatorAgent(llm?: BaseChatModel) {
             state.confidenceScore
           )
         }
-      ]);
+      ])) as ValidatorOutput;
 
       logger.info("Validation complete", {
         sufficient: response.is_sufficient,
@@ -125,16 +125,6 @@ export function createValidatorAgent(llm?: BaseChatModel) {
       };
     }
   };
-}
-
-function formatFindings(findings: ResearchState["researchFindings"]): string {
-  if (!findings) return "No findings";
-
-  return `Company: ${findings.company}
-Recent News: ${findings.recentNews ?? "Not available"}
-Stock Info: ${findings.stockInfo ?? "Not available"}
-Key Developments: ${findings.keyDevelopments ?? "Not available"}
-Sources: ${findings.sources.join(", ") || "None"}`;
 }
 
 /**

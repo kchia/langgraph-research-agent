@@ -3,19 +3,12 @@ import { TokenBudget } from "./token-budget.js";
 import { Logger } from "./logger.js";
 import { getLLM } from "./llm-factory.js";
 import { AgentNames } from "../graph/routes.js";
+import {
+  SUMMARIZATION_THRESHOLD,
+  MAX_RECENT_MESSAGES_TOKENS
+} from "./constants.js";
 
 const logger = new Logger("message-summarization");
-
-/**
- * Threshold for when to summarize messages (in tokens).
- * Only summarize if conversation exceeds this threshold.
- */
-const SUMMARIZATION_THRESHOLD = 8000; // tokens
-
-/**
- * Maximum tokens to use for recent messages after summarization.
- */
-const MAX_RECENT_MESSAGES_TOKENS = 2000;
 
 /**
  * Summarize old conversation messages using LLM.
