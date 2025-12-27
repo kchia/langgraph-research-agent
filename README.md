@@ -2,6 +2,15 @@
 
 A multi-agent research assistant built with LangGraph TypeScript.
 
+## Features
+
+- **6 Specialized Agents**: Clarity, Research, Validator, Synthesis, Interrupt, Error Recovery
+- **Multi-turn Conversations**: Context persists across queries; follow-up questions supported
+- **Human-in-the-Loop**: Automatic clarification requests for ambiguous queries
+- **Dual Data Sources**: Mock data for testing, Tavily API for production
+- **Graceful Error Recovery**: User-friendly messages instead of crashes
+- **Confidence-Based Routing**: High-confidence results skip validation for speed
+
 ## Prerequisites
 
 - Node.js 20+
@@ -22,16 +31,7 @@ cp .env.example .env
 npm start
 ```
 
-## Features
-
-- **6 Specialized Agents**: Clarity, Research, Validator, Synthesis, Interrupt, Error Recovery
-- **Multi-turn Conversations**: Context persists across queries; follow-up questions supported
-- **Human-in-the-Loop**: Automatic clarification requests for ambiguous queries
-- **Dual Data Sources**: Mock data for testing, Tavily API for production
-- **Graceful Error Recovery**: User-friendly messages instead of crashes
-- **Confidence-Based Routing**: High-confidence results skip validation for speed
-
-## Configuration
+## Env Configuration
 
 | Variable                   | Required   | Default              | Description                             |
 | -------------------------- | ---------- | -------------------- | --------------------------------------- |
