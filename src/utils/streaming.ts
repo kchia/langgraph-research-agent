@@ -1,6 +1,6 @@
 import type { ResearchGraph } from "../graph/workflow.js";
 import type { Command } from "@langchain/langgraph";
-import { validateInterruptData } from "../types/interrupt.js";
+import { validateInterruptDataWithErrors } from "../types/interrupt.js";
 import { Logger } from "./logger.js";
 import {
   isGraphTaskArray,
@@ -26,46 +26,6 @@ export interface StreamResult {
     originalQuery: string;
     attempt: number;
   };
-}
-
-/**
- * Stream graph execution with progress callbacks.
- */
-export async function streamWithProgress(
-  graph: ResearchGraph,
-  input: Record<string, unknown>,
-  config: { configurable: { thread_id: string } },
-  onProgress: (node: string) => void
-): Promise<Record<string, unknown>> {
-  const stream = await graph.stream(input, {
-    ...config,
-    streamMode: "updates"
-  });
-
-  let lastResult: Record<string, unknown> = {};
-
-  for await (const update of stream) {
-    const entries = Object.entries(update);
-    if (entries.length === 0) continue;
-
-    const [nodeName, nodeOutput] = entries[0];
-    if (nodeName && nodeName !== "__start__") {
-      onProgress(nodeName);
-      // Type-safe merge of node output
-      if (
-        nodeOutput &&
-        typeof nodeOutput === "object" &&
-        !Array.isArray(nodeOutput)
-      ) {
-        lastResult = {
-          ...lastResult,
-          ...(nodeOutput as Record<string, unknown>)
-        };
-      }
-    }
-  }
-
-  return lastResult;
 }
 
 /**
@@ -132,17 +92,21 @@ export async function streamWithInterruptSupport(
 
       if (hasInterrupt && firstTask) {
         const rawInterruptValue = getInterruptValue(firstTask);
-        const interruptData = validateInterruptData(rawInterruptValue);
+        const validationResult = validateInterruptDataWithErrors(rawInterruptValue);
 
-        if (interruptData) {
+        if (validationResult.success && validationResult.data) {
           return {
             result: state.values as Record<string, unknown>,
             interrupted: true,
-            interruptData
+            interruptData: validationResult.data
           };
         } else {
+          // Log detailed validation errors to aid debugging
           logger.warn("Invalid interrupt data structure", {
-            rawValue: rawInterruptValue
+            rawValue: rawInterruptValue,
+            rawValueType: typeof rawInterruptValue,
+            hasType: rawInterruptValue && typeof rawInterruptValue === "object" && "type" in rawInterruptValue,
+            validationErrors: validationResult.errors
           });
           // Return interrupted=false if data is invalid
           return {

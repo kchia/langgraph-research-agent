@@ -30,8 +30,8 @@ export type ClarificationInterruptPayload = z.infer<
  */
 export const ClarificationResponseSchema = z
   .string()
-  .min(1, "Clarification response cannot be empty")
-  .transform((s) => s.trim());
+  .trim()
+  .min(1, "Clarification response cannot be empty");
 
 /**
  * Valid response types for clarification interrupt.
@@ -99,6 +99,39 @@ export function isInterruptData(value: unknown): value is InterruptData {
 }
 
 /**
+ * Result type for interrupt validation with error details.
+ */
+export interface InterruptValidationResult {
+  success: boolean;
+  data?: InterruptData;
+  errors?: string[];
+}
+
+/**
+ * Validate interrupt data and return detailed result.
+ *
+ * @param value - The value from graph state interrupts
+ * @returns Validation result with data or error details
+ */
+export function validateInterruptDataWithErrors(
+  value: unknown
+): InterruptValidationResult {
+  const result = InterruptDataSchema.safeParse(value);
+  if (!result.success) {
+    return {
+      success: false,
+      errors: result.error.errors.map(
+        (e) => `${e.path.join(".")}: ${e.message}`
+      )
+    };
+  }
+  return {
+    success: true,
+    data: result.data
+  };
+}
+
+/**
  * Validate and extract interrupt data from graph state.
  * Returns null if the data is invalid or missing.
  *
@@ -106,9 +139,6 @@ export function isInterruptData(value: unknown): value is InterruptData {
  * @returns Validated interrupt data or null if invalid
  */
 export function validateInterruptData(value: unknown): InterruptData | null {
-  const result = InterruptDataSchema.safeParse(value);
-  if (!result.success) {
-    return null;
-  }
-  return result.data;
+  const result = validateInterruptDataWithErrors(value);
+  return result.success ? result.data! : null;
 }
