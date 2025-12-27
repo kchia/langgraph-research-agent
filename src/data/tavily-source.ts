@@ -8,7 +8,7 @@ import type {
 import { DataSourceError } from "./data-source.interface.js";
 import type { ResearchFindings } from "../graph/state.js";
 import { Logger } from "../utils/logger.js";
-import { isRetryableError } from "../utils/retry.js";
+import { isRetryableError, withRetry } from "../utils/retry.js";
 import { tavilyCircuitBreaker } from "../utils/resilience.js";
 
 const logger = new Logger("tavily-source");
@@ -106,11 +106,20 @@ export class TavilyDataSource implements ResearchDataSource {
     });
 
     try {
-      // Use circuit breaker for resilience against sustained failures
-      // Circuit opens after 5 consecutive failures, preventing cascade
-      const rawResult = await tavilyCircuitBreaker.execute(async () => {
-        return this.getTool().invoke({ query });
-      });
+      // Use retry with circuit breaker for resilience against transient failures
+      // Retry logic handles rate limits and timeouts with exponential backoff
+      // Circuit breaker prevents cascade failures after sustained failures
+      const rawResult = await withRetry(
+        () =>
+          tavilyCircuitBreaker.execute(async () => {
+            return this.getTool().invoke({ query });
+          }),
+        {
+          retries: 2,
+          correlationId: context.correlationId,
+          operation: "tavily-search"
+        }
+      );
 
       logger.info("Tavily search completed", {
         company,

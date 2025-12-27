@@ -13,6 +13,9 @@ export interface SearchContext {
 
   /** Current attempt number for logging */
   attemptNumber: number;
+
+  /** Correlation ID for request tracing */
+  correlationId?: string | null;
 }
 
 /**
