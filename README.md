@@ -168,7 +168,7 @@ This implementation exceeds the base requirements with the following additions:
 
 ### Token Management
 
-- **tiktoken-based Counting**: Accurate token estimation (~98% accuracy for Claude).
+- **tiktoken-based Counting**: Accurate token estimation.
 - **Sentence-Boundary Truncation**: Intelligent truncation that preserves readability.
 - **Message Summarization**: Automatic summarization of long conversations (>8000 tokens) to stay within context limits.
 
@@ -190,13 +190,13 @@ This implementation exceeds the base requirements with the following additions:
 
 ### Currently Unsupported Use Cases
 
-| Use Case | Current Behavior | What Would Be Needed |
-|----------|------------------|----------------------|
-| **Compare two companies** | Only researches one company per query | Multi-entity state tracking, parallel research subgraphs, comparison synthesis prompt |
-| **Historical analysis** | Returns current snapshot only | Time-series data source, date range parameters, trend analysis agent |
-| **Industry/sector research** | Requires specific company name | Sector classification, company discovery agent, aggregation logic |
-| **Financial deep-dives** | Surface-level metrics only | SEC filings integration, financial modeling agent, ratio analysis |
-| **Real-time monitoring** | One-shot queries only | Streaming architecture, webhook support, alerting system |
+| Use Case                     | Current Behavior                      | What Would Be Needed                                                                  |
+| ---------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------- |
+| **Compare two companies**    | Only researches one company per query | Multi-entity state tracking, parallel research subgraphs, comparison synthesis prompt |
+| **Historical analysis**      | Returns current snapshot only         | Time-series data source, date range parameters, trend analysis agent                  |
+| **Industry/sector research** | Requires specific company name        | Sector classification, company discovery agent, aggregation logic                     |
+| **Financial deep-dives**     | Surface-level metrics only            | SEC filings integration, financial modeling agent, ratio analysis                     |
+| **Real-time monitoring**     | One-shot queries only                 | Streaming architecture, webhook support, alerting system                              |
 
 ### Architectural Enhancements for Scale
 
