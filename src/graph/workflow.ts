@@ -10,6 +10,7 @@ import {
   clarificationInterrupt,
   errorRecoveryAgent
 } from "../agents/index.js";
+import { withErrorHandling } from "../utils/error-wrapper.js";
 
 /**
  * Builds and compiles the Research Assistant workflow graph.
@@ -31,11 +32,15 @@ export function buildResearchWorkflow() {
   return (
     new StateGraph(ResearchStateAnnotation)
       // ─── Node Definitions ───
-      .addNode("clarity", clarityAgent)
+      // Main agents are wrapped with error handling to catch unhandled exceptions
+      // and route them to error-recovery. Interrupt and error-recovery are NOT
+      // wrapped: interrupt uses special interrupt() behavior, error-recovery
+      // would create infinite loops if wrapped.
+      .addNode("clarity", withErrorHandling("clarity", clarityAgent))
       .addNode("interrupt", clarificationInterrupt)
-      .addNode("research", researchAgent)
-      .addNode("validator", validatorAgent)
-      .addNode("synthesis", synthesisAgent)
+      .addNode("research", withErrorHandling("research", researchAgent))
+      .addNode("validator", withErrorHandling("validator", validatorAgent))
+      .addNode("synthesis", withErrorHandling("synthesis", synthesisAgent))
       .addNode("error-recovery", errorRecoveryAgent)
 
       // ─── Entry Edge ───
@@ -92,14 +97,4 @@ export function compileResearchGraph(checkpointer: BaseCheckpointSaver) {
   return workflow.compile({ checkpointer });
 }
 
-/**
- * Backward-compatible function that builds and compiles the graph.
- * Uses the provided checkpointer for state persistence.
- *
- * @deprecated Use compileResearchGraph() with explicit checkpointer instead
- */
-export function buildResearchGraph(checkpointer: BaseCheckpointSaver) {
-  return compileResearchGraph(checkpointer);
-}
-
-export type ResearchGraph = ReturnType<typeof buildResearchGraph>;
+export type ResearchGraph = ReturnType<typeof compileResearchGraph>;
