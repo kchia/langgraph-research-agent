@@ -173,7 +173,7 @@ describe("Graph Structure", () => {
       expect(state.next).toEqual([]);
     });
 
-    it.skip("should track agent progression correctly", async () => {
+    it("should track agent progression correctly", async () => {
       // Setup for Tesla
       mocks.clarityLLM._invoke.mockResolvedValue(mocks.mockClarityTesla);
       mocks.dataSource._search.mockResolvedValue(mocks.mockSearchResultTesla);

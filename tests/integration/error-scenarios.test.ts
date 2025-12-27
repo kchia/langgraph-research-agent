@@ -391,8 +391,8 @@ describe("Error Scenarios Integration", () => {
     });
   });
 
-  describe.skip("Timeout Scenarios", () => {
-    it.skip("should handle timeout in streamWithInterruptSupport", async () => {
+  describe("Timeout Scenarios", () => {
+    it("should handle timeout in streamWithInterruptSupport", async () => {
       const config = { configurable: { thread_id: "timeout-stream" } };
       const originalTimeout = process.env.GRAPH_TIMEOUT_MS;
 
@@ -420,7 +420,7 @@ describe("Error Scenarios Integration", () => {
       }
     });
 
-    it.skip("should handle timeout in streamWithTokens", async () => {
+    it("should handle timeout in streamWithTokens", async () => {
       const config = { configurable: { thread_id: "timeout-tokens" } };
       const originalTimeout = process.env.GRAPH_TIMEOUT_MS;
 

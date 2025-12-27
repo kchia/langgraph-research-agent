@@ -4,7 +4,7 @@ import { streamWithTokens } from "../../src/utils/token-streaming.js";
 import { compileResearchGraph } from "../../src/graph/workflow.js";
 import { createNewQueryInput } from "../../src/utils/state-helpers.js";
 
-describe.skip("token-streaming error handling", () => {
+describe("token-streaming error handling", () => {
   let graph: ReturnType<typeof compileResearchGraph>;
 
   beforeEach(() => {
