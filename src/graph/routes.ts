@@ -1,8 +1,8 @@
 /**
- * Route constants for graph conditional edges.
+ * Agent name constants for graph nodes and routing.
  * Using const object instead of enum for better tree-shaking and type inference.
  */
-export const Routes = {
+export const AgentNames = {
   CLARITY: "clarity",
   INTERRUPT: "interrupt",
   RESEARCH: "research",
@@ -12,30 +12,30 @@ export const Routes = {
 } as const;
 
 /**
- * Union type of all possible routes.
+ * Union type of all agent names.
  */
-export type Route = (typeof Routes)[keyof typeof Routes];
+export type AgentName = (typeof AgentNames)[keyof typeof AgentNames];
 
 /**
  * Routes available from the clarity router.
  */
 export type ClarityRoute =
-  | typeof Routes.INTERRUPT
-  | typeof Routes.RESEARCH
-  | typeof Routes.ERROR_RECOVERY;
+  | typeof AgentNames.INTERRUPT
+  | typeof AgentNames.RESEARCH
+  | typeof AgentNames.ERROR_RECOVERY;
 
 /**
  * Routes available from the research router.
  */
 export type ResearchRoute =
-  | typeof Routes.VALIDATOR
-  | typeof Routes.SYNTHESIS
-  | typeof Routes.ERROR_RECOVERY;
+  | typeof AgentNames.VALIDATOR
+  | typeof AgentNames.SYNTHESIS
+  | typeof AgentNames.ERROR_RECOVERY;
 
 /**
  * Routes available from the validation router.
  */
 export type ValidationRoute =
-  | typeof Routes.RESEARCH
-  | typeof Routes.SYNTHESIS
-  | typeof Routes.ERROR_RECOVERY;
+  | typeof AgentNames.RESEARCH
+  | typeof AgentNames.SYNTHESIS
+  | typeof AgentNames.ERROR_RECOVERY;

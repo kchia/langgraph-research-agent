@@ -3,6 +3,7 @@ import {
   ResearchStateAnnotation,
   type ResearchState
 } from "../../src/graph/state.js";
+import { AgentNames } from "../../src/graph/routes.js";
 
 describe("ResearchStateAnnotation", () => {
   it("should have correct default values", () => {
@@ -20,7 +21,7 @@ describe("ResearchStateAnnotation", () => {
       validationResult: "pending",
       validationFeedback: null,
       finalSummary: null,
-      currentAgent: "clarity"
+      currentAgent: AgentNames.CLARITY
     };
 
     // Verify types compile correctly

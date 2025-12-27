@@ -1,70 +1,43 @@
 import { describe, it, expect, vi } from "vitest";
 import { createValidatorAgent } from "../../src/agents/validator.agent.js";
-import type { ResearchState, ResearchFindings } from "../../src/graph/state.js";
+import {
+  createTestState,
+  createMockLLMWithStructuredOutput,
+  type ValidatorLLMResponse
+} from "../helpers/test-factories.js";
+import {
+  COMPLETE_FINDINGS,
+  PARTIAL_FINDINGS,
+  createLongFindings
+} from "../helpers/test-constants.js";
+import { AgentNames } from "../../src/graph/routes.js";
 
-function createMockLLM(response: {
-  is_sufficient: boolean;
-  feedback: string | null;
-  reasoning: string;
-}) {
-  return {
-    withStructuredOutput: () => ({
-      invoke: vi.fn().mockResolvedValue(response)
-    })
-  } as any;
-}
-
-const completeFindings: ResearchFindings = {
-  company: "Apple Inc.",
-  recentNews: "Launched new products",
-  stockInfo: "Trading at $195",
-  keyDevelopments: "AI integration",
-  sources: ["Test Source"],
-  rawData: {}
-};
-
-const partialFindings: ResearchFindings = {
-  company: "Apple Inc.",
-  recentNews: "Some news",
-  stockInfo: null,
-  keyDevelopments: null,
-  sources: ["Test"],
-  rawData: {}
-};
-
-function createTestState(
-  overrides: Partial<ResearchState> = {}
-): ResearchState {
-  return {
-    messages: [],
-    conversationSummary: null,
-    originalQuery: "Tell me about Apple",
+// Create validator-specific test state with defaults
+function createValidatorTestState(
+  overrides: Partial<Parameters<typeof createTestState>[0]> = {}
+) {
+  return createTestState({
     clarityStatus: "clear",
-    clarificationAttempts: 0,
-    clarificationQuestion: null,
     detectedCompany: "Apple Inc.",
-    researchFindings: completeFindings,
+    researchFindings: COMPLETE_FINDINGS,
     confidenceScore: 8,
     researchAttempts: 1,
-    validationResult: "pending",
-    validationFeedback: null,
-    finalSummary: null,
-    currentAgent: "validator",
+    currentAgent: AgentNames.VALIDATOR,
     ...overrides
-  };
+  });
 }
 
 describe("validatorAgent", () => {
   describe("sufficient findings", () => {
     it("should approve complete findings", async () => {
-      const mockLLM = createMockLLM({
+      const mockLLM = createMockLLMWithStructuredOutput<ValidatorLLMResponse>({
         is_sufficient: true,
         feedback: null,
         reasoning: "All fields populated"
       });
 
       const agent = createValidatorAgent(mockLLM);
-      const state = createTestState();
+      const state = createValidatorTestState();
 
       const result = await agent(state);
 
@@ -75,14 +48,14 @@ describe("validatorAgent", () => {
 
   describe("insufficient findings", () => {
     it("should reject null findings", async () => {
-      const mockLLM = createMockLLM({
+      const mockLLM = createMockLLMWithStructuredOutput<ValidatorLLMResponse>({
         is_sufficient: false,
         feedback: "No data",
         reasoning: "Empty"
       });
 
       const agent = createValidatorAgent(mockLLM);
-      const state = createTestState({ researchFindings: null });
+      const state = createValidatorTestState({ researchFindings: null });
 
       const result = await agent(state);
 
@@ -91,14 +64,16 @@ describe("validatorAgent", () => {
     });
 
     it("should provide specific feedback for missing fields", async () => {
-      const mockLLM = createMockLLM({
+      const mockLLM = createMockLLMWithStructuredOutput<ValidatorLLMResponse>({
         is_sufficient: false,
         feedback: "Missing financial data and key developments",
         reasoning: "Incomplete"
       });
 
       const agent = createValidatorAgent(mockLLM);
-      const state = createTestState({ researchFindings: partialFindings });
+      const state = createValidatorTestState({
+        researchFindings: PARTIAL_FINDINGS
+      });
 
       const result = await agent(state);
 
@@ -116,7 +91,9 @@ describe("validatorAgent", () => {
       } as any;
 
       const agent = createValidatorAgent(failingLLM);
-      const state = createTestState({ researchFindings: completeFindings });
+      const state = createValidatorTestState({
+        researchFindings: COMPLETE_FINDINGS
+      });
 
       const result = await agent(state);
 
@@ -127,7 +104,6 @@ describe("validatorAgent", () => {
 
   describe("model compatibility", () => {
     it("should throw error for model without structured output support", () => {
-      // Create a mock model without withStructuredOutput method
       const unsupportedModel = {
         invoke: vi.fn()
       } as any;
@@ -138,13 +114,13 @@ describe("validatorAgent", () => {
     });
 
     it("should work with model that has withStructuredOutput", () => {
-      const supportedModel = createMockLLM({
-        is_sufficient: true,
-        feedback: null,
-        reasoning: "Test"
-      });
+      const supportedModel =
+        createMockLLMWithStructuredOutput<ValidatorLLMResponse>({
+          is_sufficient: true,
+          feedback: null,
+          reasoning: "Test"
+        });
 
-      // Should not throw
       expect(() => createValidatorAgent(supportedModel)).not.toThrow();
     });
   });
@@ -163,26 +139,15 @@ describe("validatorAgent", () => {
         })
       } as any;
 
-      // Create findings with very long text that exceeds token budget
-      const longFindings: ResearchFindings = {
-        company: "Apple Inc.",
-        recentNews: "A".repeat(50000), // Very long text
-        stockInfo: "B".repeat(50000),
-        keyDevelopments: "C".repeat(50000),
-        sources: ["Test"],
-        rawData: {}
-      };
-
       const agent = createValidatorAgent(mockLLM);
-      const state = createTestState({ researchFindings: longFindings });
+      const state = createValidatorTestState({
+        researchFindings: createLongFindings()
+      });
 
       const result = await agent(state);
 
-      // Should still work (findings truncated)
       expect(result.validationResult).toBe("sufficient");
-      // Verify LLM was called (means truncation worked)
       expect(invokeSpy).toHaveBeenCalled();
-      // Verify the findings text was truncated (check that invoke was called with truncated text)
       const callArgs = invokeSpy.mock.calls[0][0];
       expect(callArgs).toBeDefined();
     });

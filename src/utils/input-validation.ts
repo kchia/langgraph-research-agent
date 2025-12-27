@@ -46,33 +46,6 @@ export const QuerySchema = z
 export type ValidatedQuery = z.infer<typeof QuerySchema>;
 
 /**
- * Validation result interface for backward compatibility.
- */
-export interface ValidationResult {
-  valid: boolean;
-  error?: string;
-}
-
-/**
- * Validate a user query input.
- * Returns a result object with valid flag and optional error message.
- *
- * @param query - The user's query string
- * @returns Validation result with valid flag and optional error message
- */
-export function validateQuery(query: unknown): ValidationResult {
-  const result = QuerySchema.safeParse(query);
-
-  if (result.success) {
-    return { valid: true };
-  }
-
-  // Extract the first error message
-  const error = result.error.errors[0]?.message ?? "Unknown validation error";
-  return { valid: false, error };
-}
-
-/**
  * Validate and normalize a user query.
  * Throws an error if validation fails.
  *

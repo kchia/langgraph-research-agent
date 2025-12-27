@@ -1,48 +1,16 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { createClarityAgent } from "../../src/agents/clarity.agent.js";
-import type { ResearchState } from "../../src/graph/state.js";
 import { MAX_CLARIFICATION_ATTEMPTS } from "../../src/utils/constants.js";
-
-// Mock LLM for testing
-function createMockLLM(response: {
-  is_clear: boolean;
-  detected_company: string | null;
-  clarification_needed: string | null;
-  reasoning: string;
-}) {
-  return {
-    withStructuredOutput: () => ({
-      invoke: vi.fn().mockResolvedValue(response)
-    })
-  } as any;
-}
-
-function createTestState(
-  overrides: Partial<ResearchState> = {}
-): ResearchState {
-  return {
-    messages: [],
-    conversationSummary: null,
-    originalQuery: "Tell me about Apple",
-    clarityStatus: "pending",
-    clarificationAttempts: 0,
-    clarificationQuestion: null,
-    detectedCompany: null,
-    researchFindings: null,
-    confidenceScore: 0,
-    researchAttempts: 0,
-    validationResult: "pending",
-    validationFeedback: null,
-    finalSummary: null,
-    currentAgent: "clarity",
-    ...overrides
-  };
-}
+import {
+  createTestState,
+  createMockLLMWithStructuredOutput,
+  type ClarityLLMResponse
+} from "../helpers/test-factories.js";
 
 describe("clarityAgent", () => {
   describe("clear queries", () => {
     it("should detect company from explicit mention", async () => {
-      const mockLLM = createMockLLM({
+      const mockLLM = createMockLLMWithStructuredOutput<ClarityLLMResponse>({
         is_clear: true,
         detected_company: "Apple Inc.",
         clarification_needed: null,
@@ -61,7 +29,7 @@ describe("clarityAgent", () => {
 
   describe("unclear queries", () => {
     it("should request clarification for vague queries", async () => {
-      const mockLLM = createMockLLM({
+      const mockLLM = createMockLLMWithStructuredOutput<ClarityLLMResponse>({
         is_clear: false,
         detected_company: null,
         clarification_needed: "Which company are you asking about?",
@@ -83,7 +51,7 @@ describe("clarityAgent", () => {
 
   describe("follow-up queries", () => {
     it("should use existing company for follow-ups", async () => {
-      const mockLLM = createMockLLM({
+      const mockLLM = createMockLLMWithStructuredOutput<ClarityLLMResponse>({
         is_clear: true,
         detected_company: "Apple Inc.",
         clarification_needed: null,
@@ -105,7 +73,7 @@ describe("clarityAgent", () => {
 
   describe("max attempts", () => {
     it("should force proceed after max clarification attempts", async () => {
-      const mockLLM = createMockLLM({
+      const mockLLM = createMockLLMWithStructuredOutput<ClarityLLMResponse>({
         is_clear: false,
         detected_company: null,
         clarification_needed: "Still unclear",
@@ -126,7 +94,7 @@ describe("clarityAgent", () => {
 
   describe("cancel requests", () => {
     it("should handle 'nevermind' gracefully", async () => {
-      const mockLLM = createMockLLM({
+      const mockLLM = createMockLLMWithStructuredOutput<ClarityLLMResponse>({
         is_clear: false,
         detected_company: null,
         clarification_needed: null,
@@ -145,7 +113,7 @@ describe("clarityAgent", () => {
 
   describe("empty query", () => {
     it("should request clarification for empty input", async () => {
-      const mockLLM = createMockLLM({
+      const mockLLM = createMockLLMWithStructuredOutput<ClarityLLMResponse>({
         is_clear: false,
         detected_company: null,
         clarification_needed: null,
@@ -175,7 +143,7 @@ describe("clarityAgent", () => {
     });
 
     it("should work with model that has withStructuredOutput", () => {
-      const supportedModel = createMockLLM({
+      const supportedModel = createMockLLMWithStructuredOutput<ClarityLLMResponse>({
         is_clear: true,
         detected_company: "Apple Inc.",
         clarification_needed: null,
@@ -189,7 +157,7 @@ describe("clarityAgent", () => {
 
   describe("conversation summary", () => {
     it("should use existing conversation summary if available", async () => {
-      const mockLLM = createMockLLM({
+      const mockLLM = createMockLLMWithStructuredOutput<ClarityLLMResponse>({
         is_clear: true,
         detected_company: "Apple Inc.",
         clarification_needed: null,
@@ -213,7 +181,7 @@ describe("clarityAgent", () => {
     });
 
     it("should work without conversation summary", async () => {
-      const mockLLM = createMockLLM({
+      const mockLLM = createMockLLMWithStructuredOutput<ClarityLLMResponse>({
         is_clear: true,
         detected_company: "Apple Inc.",
         clarification_needed: null,

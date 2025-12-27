@@ -1,57 +1,29 @@
 import { describe, it, expect, vi } from "vitest";
 import { createResearchAgent } from "../../src/agents/research.agent.js";
-import type { ResearchState } from "../../src/graph/state.js";
-import type {
-  ResearchDataSource,
-  SearchContext,
-  SearchResult
-} from "../../src/data/data-source.interface.js";
-import { DataSourceError } from "../../src/data/data-source.interface.js";
+import type { ResearchDataSource } from "../../src/sources/data-source.interface.js";
+import { DataSourceError } from "../../src/sources/data-source.interface.js";
+import {
+  createTestState,
+  createTrackingDataSource
+} from "../helpers/test-factories.js";
+import { AgentNames } from "../../src/graph/routes.js";
 
-// Tracking mock data source
-function createTrackingMock(
-  results: SearchResult[]
-): ResearchDataSource & { contexts: SearchContext[] } {
-  let callIndex = 0;
-  const contexts: SearchContext[] = [];
-
-  return {
-    contexts,
-    search: vi.fn(async (company: string, context: SearchContext) => {
-      contexts.push(context);
-      return results[callIndex++] ?? results[results.length - 1];
-    }),
-    getName: () => "Tracking Mock",
-    isAvailable: () => true
-  };
-}
-
-function createTestState(
-  overrides: Partial<ResearchState> = {}
-): ResearchState {
-  return {
-    messages: [],
-    conversationSummary: null,
-    originalQuery: "Tell me about Apple",
+// Create research-specific test state with defaults
+function createResearchTestState(
+  overrides: Partial<Parameters<typeof createTestState>[0]> = {}
+) {
+  return createTestState({
     clarityStatus: "clear",
-    clarificationAttempts: 0,
-    clarificationQuestion: null,
     detectedCompany: "Apple Inc.",
-    researchFindings: null,
-    confidenceScore: 0,
-    researchAttempts: 0,
-    validationResult: "pending",
-    validationFeedback: null,
-    finalSummary: null,
-    currentAgent: "research",
+    currentAgent: AgentNames.RESEARCH,
     ...overrides
-  };
+  });
 }
 
 describe("researchAgent", () => {
   describe("successful search", () => {
     it("should return findings and confidence", async () => {
-      const mockSource = createTrackingMock([
+      const mockSource = createTrackingDataSource([
         {
           findings: {
             company: "Apple Inc.",
@@ -67,7 +39,7 @@ describe("researchAgent", () => {
       ]);
 
       const agent = createResearchAgent(mockSource);
-      const state = createTestState();
+      const state = createResearchTestState();
 
       const result = await agent(state);
 
@@ -77,7 +49,7 @@ describe("researchAgent", () => {
     });
 
     it("should increment attempt counter", async () => {
-      const mockSource = createTrackingMock([
+      const mockSource = createTrackingDataSource([
         {
           findings: null,
           confidence: 0,
@@ -86,7 +58,7 @@ describe("researchAgent", () => {
       ]);
 
       const agent = createResearchAgent(mockSource);
-      const state = createTestState({ researchAttempts: 2 });
+      const state = createResearchTestState({ researchAttempts: 2 });
 
       const result = await agent(state);
 
@@ -96,7 +68,7 @@ describe("researchAgent", () => {
 
   describe("validation feedback", () => {
     it("should pass validation feedback to data source", async () => {
-      const mockSource = createTrackingMock([
+      const mockSource = createTrackingDataSource([
         {
           findings: null,
           confidence: 5,
@@ -105,7 +77,7 @@ describe("researchAgent", () => {
       ]);
 
       const agent = createResearchAgent(mockSource);
-      const state = createTestState({
+      const state = createResearchTestState({
         validationFeedback: "Missing financial data",
         researchAttempts: 1
       });
@@ -121,10 +93,10 @@ describe("researchAgent", () => {
 
   describe("no company", () => {
     it("should return null findings when no company detected", async () => {
-      const mockSource = createTrackingMock([]);
+      const mockSource = createTrackingDataSource([]);
 
       const agent = createResearchAgent(mockSource);
-      const state = createTestState({ detectedCompany: null });
+      const state = createResearchTestState({ detectedCompany: null });
 
       const result = await agent(state);
 
@@ -145,7 +117,7 @@ describe("researchAgent", () => {
       };
 
       const agent = createResearchAgent(mockSource);
-      const state = createTestState();
+      const state = createResearchTestState();
 
       const result = await agent(state);
 

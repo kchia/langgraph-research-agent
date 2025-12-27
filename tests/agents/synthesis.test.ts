@@ -1,52 +1,39 @@
 import { describe, it, expect, vi } from "vitest";
 import { createSynthesisAgent } from "../../src/agents/synthesis.agent.js";
-import type { ResearchState, ResearchFindings } from "../../src/graph/state.js";
 import { MAX_RESEARCH_ATTEMPTS } from "../../src/utils/constants.js";
+import {
+  createTestState,
+  createMockLLMSimple
+} from "../helpers/test-factories.js";
+import {
+  COMPLETE_FINDINGS,
+  createLongFindings
+} from "../helpers/test-constants.js";
+import { AgentNames } from "../../src/graph/routes.js";
 
-function createMockLLM(responseContent: string) {
-  return {
-    invoke: vi.fn().mockResolvedValue({ content: responseContent })
-  } as any;
-}
-
-const completeFindings: ResearchFindings = {
-  company: "Apple Inc.",
-  recentNews: "Launched Vision Pro",
-  stockInfo: "AAPL at $195",
-  keyDevelopments: "AI integration",
-  sources: ["Test"],
-  rawData: {}
-};
-
-function createTestState(
-  overrides: Partial<ResearchState> = {}
-): ResearchState {
-  return {
-    messages: [],
-    conversationSummary: null,
-    originalQuery: "Tell me about Apple",
+// Create synthesis-specific test state with defaults
+function createSynthesisTestState(
+  overrides: Partial<Parameters<typeof createTestState>[0]> = {}
+) {
+  return createTestState({
     clarityStatus: "clear",
-    clarificationAttempts: 0,
-    clarificationQuestion: null,
     detectedCompany: "Apple Inc.",
-    researchFindings: completeFindings,
+    researchFindings: COMPLETE_FINDINGS,
     confidenceScore: 8,
     researchAttempts: 1,
     validationResult: "sufficient",
-    validationFeedback: null,
-    finalSummary: null,
-    currentAgent: "synthesis",
+    currentAgent: AgentNames.SYNTHESIS,
     ...overrides
-  };
+  });
 }
 
 describe("synthesisAgent", () => {
   describe("high confidence", () => {
     it("should generate summary without disclaimer", async () => {
-      const mockLLM = createMockLLM("Apple is doing great!");
+      const mockLLM = createMockLLMSimple("Apple is doing great!");
 
       const agent = createSynthesisAgent(mockLLM);
-      const state = createTestState({ confidenceScore: 9 });
+      const state = createSynthesisTestState({ confidenceScore: 9 });
 
       const result = await agent(state);
 
@@ -58,10 +45,10 @@ describe("synthesisAgent", () => {
 
   describe("low confidence", () => {
     it("should add warning prefix for low confidence", async () => {
-      const mockLLM = createMockLLM("Limited Apple info.");
+      const mockLLM = createMockLLMSimple("Limited Apple info.");
 
       const agent = createSynthesisAgent(mockLLM);
-      const state = createTestState({ confidenceScore: 3 });
+      const state = createSynthesisTestState({ confidenceScore: 3 });
 
       const result = await agent(state);
 
@@ -72,10 +59,10 @@ describe("synthesisAgent", () => {
 
   describe("max attempts reached", () => {
     it("should indicate verification issues when max attempts hit", async () => {
-      const mockLLM = createMockLLM("Partial Apple info.");
+      const mockLLM = createMockLLMSimple("Partial Apple info.");
 
       const agent = createSynthesisAgent(mockLLM);
-      const state = createTestState({
+      const state = createSynthesisTestState({
         confidenceScore: 6,
         validationResult: "insufficient",
         researchAttempts: MAX_RESEARCH_ATTEMPTS
@@ -89,10 +76,10 @@ describe("synthesisAgent", () => {
 
   describe("no data", () => {
     it("should generate apologetic response for null findings", async () => {
-      const mockLLM = createMockLLM("Should not see this");
+      const mockLLM = createMockLLMSimple("Should not see this");
 
       const agent = createSynthesisAgent(mockLLM);
-      const state = createTestState({ researchFindings: null });
+      const state = createSynthesisTestState({ researchFindings: null });
 
       const result = await agent(state);
 
@@ -108,12 +95,12 @@ describe("synthesisAgent", () => {
       } as any;
 
       const agent = createSynthesisAgent(failingLLM);
-      const state = createTestState();
+      const state = createSynthesisTestState();
 
       const result = await agent(state);
 
       expect(result.finalSummary).toContain("Apple Inc.");
-      expect(result.finalSummary).toContain("Vision Pro"); // From findings
+      expect(result.finalSummary).toContain("Launched Vision Pro"); // From COMPLETE_FINDINGS
     });
   });
 
@@ -127,24 +114,14 @@ describe("synthesisAgent", () => {
         invoke: invokeSpy
       } as any;
 
-      // Create findings with very long text that exceeds token budget
-      const longFindings: ResearchFindings = {
-        company: "Apple Inc.",
-        recentNews: "A".repeat(100000), // Very long text
-        stockInfo: "B".repeat(100000),
-        keyDevelopments: "C".repeat(100000),
-        sources: ["Test"],
-        rawData: {}
-      };
-
       const agent = createSynthesisAgent(mockLLM);
-      const state = createTestState({ researchFindings: longFindings });
+      const state = createSynthesisTestState({
+        researchFindings: createLongFindings()
+      });
 
       const result = await agent(state);
 
-      // Should still work (findings truncated)
       expect(result.finalSummary).toBe("Summary of findings");
-      // Verify LLM was called (means truncation worked)
       expect(invokeSpy).toHaveBeenCalled();
     });
   });

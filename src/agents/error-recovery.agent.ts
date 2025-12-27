@@ -1,6 +1,7 @@
 import { AIMessage } from "@langchain/core/messages";
 import type { ResearchState, ErrorContext } from "../graph/state.js";
-import { Logger, createLoggerWithCorrelationId } from "../utils/logger.js";
+import { createLoggerWithCorrelationId } from "../utils/logger.js";
+import { AgentNames } from "../graph/routes.js";
 
 /**
  * Error recovery agent that handles errors gracefully.
@@ -27,7 +28,7 @@ export async function errorRecoveryAgent(
           "An unexpected error occurred while processing your request. Please try again."
         )
       ],
-      currentAgent: "error-recovery"
+      currentAgent: AgentNames.ERROR_RECOVERY
     };
   }
 
@@ -41,20 +42,20 @@ export async function errorRecoveryAgent(
   let userMessage: string;
 
   switch (error.failedNode) {
-    case "research":
+    case AgentNames.RESEARCH:
       userMessage =
         "I had trouble finding information about this company. " +
         "The data sources may be temporarily unavailable. " +
         "Please try again in a moment, or try rephrasing your query.";
       break;
 
-    case "clarity":
+    case AgentNames.CLARITY:
       userMessage =
         "I had trouble understanding your query. " +
         "Could you please rephrase it or provide more details?";
       break;
 
-    case "validator":
+    case AgentNames.VALIDATOR:
       userMessage =
         "I found some information but couldn't verify its quality. " +
         "Here's what I found, though it may be incomplete:";
@@ -71,7 +72,7 @@ export async function errorRecoveryAgent(
       }
       break;
 
-    case "synthesis":
+    case AgentNames.SYNTHESIS:
       userMessage =
         "I found information but had trouble generating a summary. " +
         "Here's what I found:";

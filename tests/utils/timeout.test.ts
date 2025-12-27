@@ -12,9 +12,13 @@ describe("timeout utility", () => {
     vi.useFakeTimers();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    // Ensure all timers are cleared and real timers are restored
+    vi.clearAllTimers();
     vi.useRealTimers();
     delete process.env.GRAPH_TIMEOUT_MS;
+    // Give event loop a chance to process any pending timers
+    await new Promise((resolve) => setImmediate(resolve));
   });
 
   describe("withTimeout", () => {

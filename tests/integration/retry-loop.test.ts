@@ -7,6 +7,7 @@ import {
 } from "../../src/graph/state.js";
 import { researchRouter, validationRouter } from "../../src/graph/routers.js";
 import { MAX_RESEARCH_ATTEMPTS } from "../../src/utils/constants.js";
+import { AgentNames } from "../../src/graph/routes.js";
 
 describe("Retry Loop Integration", () => {
   it("should retry research when validation fails", async () => {
@@ -36,7 +37,7 @@ describe("Retry Loop Integration", () => {
         },
         confidenceScore: confidence,
         researchAttempts: attempt,
-        currentAgent: "research"
+        currentAgent: AgentNames.RESEARCH
       };
     };
 
@@ -50,43 +51,43 @@ describe("Retry Loop Integration", () => {
         return {
           validationResult: "insufficient",
           validationFeedback: "Missing news data",
-          currentAgent: "validator"
+          currentAgent: AgentNames.VALIDATOR
         };
       }
       return {
         validationResult: "sufficient",
         validationFeedback: null,
-        currentAgent: "validator"
+        currentAgent: AgentNames.VALIDATOR
       };
     };
 
     const synthesisAgent = (state: ResearchState): Partial<ResearchState> => ({
       finalSummary: `Done after ${state.researchAttempts} attempts`,
-      currentAgent: "synthesis"
+      currentAgent: AgentNames.SYNTHESIS
     });
 
     const clarityAgent = (state: ResearchState): Partial<ResearchState> => ({
       clarityStatus: "clear",
       detectedCompany: "Test Co",
-      currentAgent: "clarity"
+      currentAgent: AgentNames.CLARITY
     });
 
     const graph = new StateGraph(ResearchStateAnnotation)
-      .addNode("clarity", clarityAgent)
-      .addNode("research", trackingResearchAgent)
-      .addNode("validator", trackingValidator)
-      .addNode("synthesis", synthesisAgent)
-      .addEdge(START, "clarity")
-      .addEdge("clarity", "research")
-      .addConditionalEdges("research", researchRouter, {
-        validator: "validator",
-        synthesis: "synthesis"
+      .addNode(AgentNames.CLARITY, clarityAgent)
+      .addNode(AgentNames.RESEARCH, trackingResearchAgent)
+      .addNode(AgentNames.VALIDATOR, trackingValidator)
+      .addNode(AgentNames.SYNTHESIS, synthesisAgent)
+      .addEdge(START, AgentNames.CLARITY)
+      .addEdge(AgentNames.CLARITY, AgentNames.RESEARCH)
+      .addConditionalEdges(AgentNames.RESEARCH, researchRouter, {
+        [AgentNames.VALIDATOR]: AgentNames.VALIDATOR,
+        [AgentNames.SYNTHESIS]: AgentNames.SYNTHESIS
       })
-      .addConditionalEdges("validator", validationRouter, {
-        research: "research",
-        synthesis: "synthesis"
+      .addConditionalEdges(AgentNames.VALIDATOR, validationRouter, {
+        [AgentNames.RESEARCH]: AgentNames.RESEARCH,
+        [AgentNames.SYNTHESIS]: AgentNames.SYNTHESIS
       })
-      .addEdge("synthesis", END)
+      .addEdge(AgentNames.SYNTHESIS, END)
       .compile({ checkpointer: new MemorySaver() });
 
     const config = { configurable: { thread_id: "retry-test" } };
@@ -112,7 +113,7 @@ describe("Retry Loop Integration", () => {
     const alwaysFailValidator = (): Partial<ResearchState> => ({
       validationResult: "insufficient",
       validationFeedback: "Always fails",
-      currentAgent: "validator"
+      currentAgent: AgentNames.VALIDATOR
     });
 
     let researchCalls = 0;
@@ -129,33 +130,33 @@ describe("Retry Loop Integration", () => {
         },
         confidenceScore: 2, // Low, triggers validation
         researchAttempts: state.researchAttempts + 1,
-        currentAgent: "research"
+        currentAgent: AgentNames.RESEARCH
       };
     };
 
     const graph = new StateGraph(ResearchStateAnnotation)
-      .addNode("clarity", () => ({
+      .addNode(AgentNames.CLARITY, () => ({
         clarityStatus: "clear",
         detectedCompany: "Test",
-        currentAgent: "clarity"
+        currentAgent: AgentNames.CLARITY
       }))
-      .addNode("research", countingResearch)
-      .addNode("validator", alwaysFailValidator)
-      .addNode("synthesis", (state) => ({
+      .addNode(AgentNames.RESEARCH, countingResearch)
+      .addNode(AgentNames.VALIDATOR, alwaysFailValidator)
+      .addNode(AgentNames.SYNTHESIS, (state) => ({
         finalSummary: `Stopped after ${state.researchAttempts} attempts`,
-        currentAgent: "synthesis"
+        currentAgent: AgentNames.SYNTHESIS
       }))
-      .addEdge(START, "clarity")
-      .addEdge("clarity", "research")
-      .addConditionalEdges("research", researchRouter, {
-        validator: "validator",
-        synthesis: "synthesis"
+      .addEdge(START, AgentNames.CLARITY)
+      .addEdge(AgentNames.CLARITY, AgentNames.RESEARCH)
+      .addConditionalEdges(AgentNames.RESEARCH, researchRouter, {
+        [AgentNames.VALIDATOR]: AgentNames.VALIDATOR,
+        [AgentNames.SYNTHESIS]: AgentNames.SYNTHESIS
       })
-      .addConditionalEdges("validator", validationRouter, {
-        research: "research",
-        synthesis: "synthesis"
+      .addConditionalEdges(AgentNames.VALIDATOR, validationRouter, {
+        [AgentNames.RESEARCH]: AgentNames.RESEARCH,
+        [AgentNames.SYNTHESIS]: AgentNames.SYNTHESIS
       })
-      .addEdge("synthesis", END)
+      .addEdge(AgentNames.SYNTHESIS, END)
       .compile({ checkpointer: new MemorySaver() });
 
     const result = await graph.invoke(

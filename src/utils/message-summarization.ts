@@ -2,6 +2,7 @@ import type { BaseMessage } from "@langchain/core/messages";
 import { TokenBudget } from "./token-budget.js";
 import { Logger } from "./logger.js";
 import { getLLM } from "./llm-factory.js";
+import { AgentNames } from "../graph/routes.js";
 
 const logger = new Logger("message-summarization");
 
@@ -85,7 +86,7 @@ ${oldMessagesText}
 
 Summary:`;
 
-    const model = getLLM("synthesis");
+    const model = getLLM(AgentNames.SYNTHESIS);
     const response = await model.invoke([
       {
         role: "user",

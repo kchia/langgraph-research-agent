@@ -1,36 +1,26 @@
 import { describe, it, expect } from "vitest";
 import { errorRecoveryAgent } from "../../src/agents/error-recovery.agent.js";
-import type { ResearchState } from "../../src/graph/state.js";
+import { createTestState } from "../helpers/test-factories.js";
+import { AgentNames } from "../../src/graph/routes.js";
 
-function createTestState(
-  overrides: Partial<ResearchState & { errorContext?: unknown }> = {}
-): ResearchState & { errorContext?: unknown } {
-  return {
-    messages: [],
-    conversationSummary: null,
-    originalQuery: "Tell me about Apple",
+// Create error-recovery-specific test state with defaults
+function createErrorRecoveryTestState(
+  overrides: Partial<
+    Parameters<typeof createTestState>[0] & { errorContext?: unknown }
+  > = {}
+) {
+  return createTestState({
     clarityStatus: "clear",
-    clarificationAttempts: 0,
-    clarificationQuestion: null,
-    clarificationResponse: null,
     detectedCompany: "Apple Inc.",
-    researchFindings: null,
-    confidenceScore: 0,
-    researchAttempts: 0,
-    validationResult: "pending",
-    validationFeedback: null,
-    finalSummary: null,
-    currentAgent: "clarity",
-    errorContext: null,
     ...overrides
-  };
+  }) as ReturnType<typeof createTestState> & { errorContext?: unknown };
 }
 
 describe("errorRecoveryAgent", () => {
   it("should handle error from research node", async () => {
-    const state = createTestState({
+    const state = createErrorRecoveryTestState({
       errorContext: {
-        failedNode: "research",
+        failedNode: AgentNames.RESEARCH,
         errorMessage: "Data source unavailable",
         isRetryable: true
       }
@@ -40,14 +30,14 @@ describe("errorRecoveryAgent", () => {
 
     expect(result.finalSummary).toBeDefined();
     expect(result.finalSummary).toContain("trouble finding information");
-    expect(result.currentAgent).toBe("error-recovery");
-    expect(result.errorContext).toBeUndefined(); // Should be cleared
+    expect(result.currentAgent).toBe(AgentNames.ERROR_RECOVERY);
+    expect(result.errorContext).toBeUndefined();
   });
 
   it("should handle error from clarity node", async () => {
-    const state = createTestState({
+    const state = createErrorRecoveryTestState({
       errorContext: {
-        failedNode: "clarity",
+        failedNode: AgentNames.CLARITY,
         errorMessage: "LLM call failed",
         isRetryable: false
       }
@@ -57,13 +47,13 @@ describe("errorRecoveryAgent", () => {
 
     expect(result.finalSummary).toBeDefined();
     expect(result.finalSummary).toContain("trouble understanding");
-    expect(result.currentAgent).toBe("error-recovery");
+    expect(result.currentAgent).toBe(AgentNames.ERROR_RECOVERY);
   });
 
   it("should handle error from validator node with findings", async () => {
-    const state = createTestState({
+    const state = createErrorRecoveryTestState({
       errorContext: {
-        failedNode: "validator",
+        failedNode: AgentNames.VALIDATOR,
         errorMessage: "Validation failed",
         isRetryable: false
       },
@@ -86,9 +76,9 @@ describe("errorRecoveryAgent", () => {
   });
 
   it("should handle error from synthesis node with findings", async () => {
-    const state = createTestState({
+    const state = createErrorRecoveryTestState({
       errorContext: {
-        failedNode: "synthesis",
+        failedNode: AgentNames.SYNTHESIS,
         errorMessage: "LLM generation failed",
         isRetryable: false
       },
@@ -110,7 +100,7 @@ describe("errorRecoveryAgent", () => {
   });
 
   it("should handle error without error context", async () => {
-    const state = createTestState({
+    const state = createErrorRecoveryTestState({
       errorContext: null
     });
 
@@ -118,11 +108,11 @@ describe("errorRecoveryAgent", () => {
 
     expect(result.finalSummary).toBeDefined();
     expect(result.finalSummary).toContain("unexpected error");
-    expect(result.currentAgent).toBe("error-recovery");
+    expect(result.currentAgent).toBe(AgentNames.ERROR_RECOVERY);
   });
 
   it("should handle unknown node error", async () => {
-    const state = createTestState({
+    const state = createErrorRecoveryTestState({
       errorContext: {
         failedNode: "unknown-node",
         errorMessage: "Unknown error",
@@ -134,13 +124,13 @@ describe("errorRecoveryAgent", () => {
 
     expect(result.finalSummary).toBeDefined();
     expect(result.finalSummary).toContain("error occurred");
-    expect(result.currentAgent).toBe("error-recovery");
+    expect(result.currentAgent).toBe(AgentNames.ERROR_RECOVERY);
   });
 
   it("should add message to state", async () => {
-    const state = createTestState({
+    const state = createErrorRecoveryTestState({
       errorContext: {
-        failedNode: "research",
+        failedNode: AgentNames.RESEARCH,
         errorMessage: "Test error",
         isRetryable: false
       }

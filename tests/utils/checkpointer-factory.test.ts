@@ -70,7 +70,7 @@ describe("checkpointer-factory", () => {
     it("should throw error for invalid CHECKPOINTER_TYPE", () => {
       process.env.CHECKPOINTER_TYPE = "invalid";
       expect(() => getCheckpointerConfigFromEnv()).toThrow(
-        'Invalid CHECKPOINTER_TYPE: "invalid"'
+        "Invalid checkpointer configuration"
       );
     });
 

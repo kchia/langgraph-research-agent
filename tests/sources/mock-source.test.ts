@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { MockDataSource } from "../../src/data/mock-source.js";
-import type { SearchContext } from "../../src/data/data-source.interface.js";
+import { MockDataSource } from "../../src/sources/mock-source.js";
+import type { SearchContext } from "../../src/sources/data-source.interface.js";
 
 describe("MockDataSource", () => {
   let source: MockDataSource;
@@ -56,19 +56,15 @@ describe("MockDataSource", () => {
       expect(result.findings?.keyDevelopments).not.toBeNull();
     });
 
-    it("should normalize company names correctly", async () => {
-      const variations = [
-        "apple",
-        "APPLE",
-        "Apple Inc.",
-        "apple inc",
-        "Apple, Inc."
-      ];
-
-      for (const variant of variations) {
-        const result = await source.search(variant, baseContext);
-        expect(result.findings?.company).toBe("Apple Inc.");
-      }
+    it.each([
+      ["apple", "Apple Inc."],
+      ["APPLE", "Apple Inc."],
+      ["Apple Inc.", "Apple Inc."],
+      ["apple inc", "Apple Inc."],
+      ["Apple, Inc.", "Apple Inc."]
+    ])("should normalize '%s' to '%s'", async (input, expected) => {
+      const result = await source.search(input, baseContext);
+      expect(result.findings?.company).toBe(expected);
     });
 
     it("should return null findings for unknown companies", async () => {
@@ -92,13 +88,13 @@ describe("MockDataSource", () => {
       expect(result.findings?.rawData.usedFeedback).toBe("Missing financial data");
     });
 
-    it("should return all 5 known companies", async () => {
-      const companies = ["Apple", "Tesla", "Microsoft", "Amazon", "Google"];
-
-      for (const company of companies) {
+    it.each(["Apple", "Tesla", "Microsoft", "Amazon", "Google"])(
+      "should return findings for known company '%s'",
+      async (company) => {
         const result = await source.search(company, baseContext);
         expect(result.findings).not.toBeNull();
+        expect(result.findings?.company).toBeDefined();
       }
-    });
+    );
   });
 });

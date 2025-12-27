@@ -20,9 +20,9 @@ const AppConfigSchema = z
   .object({
     anthropicApiKey: z.string().optional(),
     tavilyApiKey: z.string().optional(),
-    dataSource: z.enum(["mock", "tavily", "auto"]).default("auto"),
-    logLevel: z.string().default("info"),
-    langsmithEnabled: z.boolean().default(false),
+    dataSource: z.enum(["mock", "tavily", "auto"]),
+    logLevel: z.string(),
+    langsmithEnabled: z.boolean(),
     models: z
       .object({
         clarity: z.string().optional(),

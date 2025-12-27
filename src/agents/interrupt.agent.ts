@@ -3,6 +3,7 @@ import { HumanMessage } from "@langchain/core/messages";
 import type { ResearchState } from "../graph/state.js";
 import type { ClarificationInterruptPayload } from "../types/interrupt.js";
 import { validateClarificationResponse } from "../types/interrupt.js";
+import { AgentNames } from "../graph/routes.js";
 
 /**
  * Interrupt node that pauses for user clarification.
@@ -53,6 +54,6 @@ export async function clarificationInterrupt(
     messages: [new HumanMessage(clarification)],
     clarificationResponse: clarification,
     clarityStatus: "pending",
-    currentAgent: "interrupt"
+    currentAgent: AgentNames.INTERRUPT
   };
 }

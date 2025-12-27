@@ -49,7 +49,7 @@ export function createLLM(agentType: AgentType): BaseChatModel {
 
 /**
  * Clear the LLM cache.
- * Useful for testing or when config changes.
+ * Used for testing to ensure fresh LLM instances.
  */
 export function clearLLMCache(): void {
   modelCache.clear();

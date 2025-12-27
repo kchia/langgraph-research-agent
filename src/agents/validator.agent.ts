@@ -10,6 +10,7 @@ import { createLoggerWithCorrelationId } from "../utils/logger.js";
 import { getLLM, supportsStructuredOutput } from "../utils/llm-factory.js";
 import { TokenBudget } from "../utils/token-budget.js";
 import { TOKEN_BUDGETS } from "../utils/constants.js";
+import { AgentNames } from "../graph/routes.js";
 
 const ValidatorOutputSchema = z.object({
   is_sufficient: z.boolean(),
@@ -61,7 +62,7 @@ export function createValidatorAgent(llm?: BaseChatModel) {
         validationResult: "insufficient",
         validationFeedback:
           "No research data found. Try searching with different terms.",
-        currentAgent: "validator"
+        currentAgent: AgentNames.VALIDATOR
       };
     }
 
@@ -105,7 +106,7 @@ export function createValidatorAgent(llm?: BaseChatModel) {
           ? "sufficient"
           : "insufficient",
         validationFeedback: response.feedback,
-        currentAgent: "validator"
+        currentAgent: AgentNames.VALIDATOR
       };
     } catch (error) {
       logger.error("Validator agent LLM call failed", {
@@ -120,7 +121,7 @@ export function createValidatorAgent(llm?: BaseChatModel) {
       return {
         validationResult: fallbackResult.result,
         validationFeedback: fallbackResult.feedback,
-        currentAgent: "validator"
+        currentAgent: AgentNames.VALIDATOR
       };
     }
   };
@@ -144,9 +145,10 @@ Sources: ${findings.sources.join(", ") || "None"}`;
  * 2. Should have at least 2 sources for verification
  * 3. Stock info is optional but contributes to sufficiency
  */
-function ruleBasedValidation(
-  findings: ResearchState["researchFindings"]
-): { result: "sufficient" | "insufficient"; feedback: string | null } {
+function ruleBasedValidation(findings: ResearchState["researchFindings"]): {
+  result: "sufficient" | "insufficient";
+  feedback: string | null;
+} {
   if (!findings) {
     return {
       result: "insufficient",

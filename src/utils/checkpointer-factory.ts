@@ -1,15 +1,27 @@
+import { z } from "zod";
 import { MemorySaver } from "@langchain/langgraph";
 import type { BaseCheckpointSaver } from "@langchain/langgraph";
 import { Logger } from "./logger.js";
 
 const logger = new Logger("checkpointer-factory");
 
-export type CheckpointerType = "memory" | "sqlite";
+/**
+ * Zod schema for checkpointer configuration.
+ */
+const CheckpointerConfigSchema = z.object({
+  type: z.enum(["memory", "sqlite"]),
+  sqlitePath: z.string().optional()
+});
 
-export interface CheckpointerConfig {
-  type: CheckpointerType;
-  sqlitePath?: string;
-}
+/**
+ * Checkpointer configuration type (inferred from schema).
+ */
+export type CheckpointerConfig = z.infer<typeof CheckpointerConfigSchema>;
+
+/**
+ * Checkpointer type enum values.
+ */
+export type CheckpointerType = CheckpointerConfig["type"];
 
 /**
  * Create a checkpointer instance based on configuration.
@@ -22,16 +34,19 @@ export async function createCheckpointer(
 ): Promise<BaseCheckpointSaver> {
   logger.info("Creating checkpointer", { type: config.type });
 
-  // Validate checkpointer type
-  if (config.type !== "memory" && config.type !== "sqlite") {
+  // Validate configuration with Zod
+  const result = CheckpointerConfigSchema.safeParse(config);
+  if (!result.success) {
     throw new Error(
-      `Invalid checkpointer type: "${config.type}". ` +
-        `Must be one of: "memory", "sqlite". ` +
-        `Received: ${JSON.stringify(config.type)}`
+      `Invalid checkpointer configuration: ${result.error.errors
+        .map((e) => `${e.path.join(".")}: ${e.message}`)
+        .join(", ")}`
     );
   }
 
-  switch (config.type) {
+  const validatedConfig = result.data;
+
+  switch (validatedConfig.type) {
     case "sqlite": {
       // Dynamic import to avoid requiring sqlite dependency if not used
       const moduleName = "@langchain/langgraph-checkpoint-sqlite";
@@ -42,7 +57,7 @@ export async function createCheckpointer(
           /* webpackIgnore: true */ moduleName
         )) as any;
         const SqliteSaver = sqliteModule.SqliteSaver;
-        const dbPath = config.sqlitePath ?? ":memory:";
+        const dbPath = validatedConfig.sqlitePath ?? ":memory:";
         logger.info("Initializing SQLite checkpointer", { path: dbPath });
         return SqliteSaver.fromConnString(dbPath);
       } catch (error) {
@@ -66,19 +81,20 @@ export async function createCheckpointer(
  * @throws Error if CHECKPOINTER_TYPE is set to an invalid value
  */
 export function getCheckpointerConfigFromEnv(): CheckpointerConfig {
-  const type = (process.env.CHECKPOINTER_TYPE ?? "memory") as CheckpointerType;
+  const rawConfig = {
+    type: process.env.CHECKPOINTER_TYPE ?? "memory",
+    sqlitePath: process.env.CHECKPOINTER_SQLITE_PATH
+  };
 
-  // Validate checkpointer type
-  if (type !== "memory" && type !== "sqlite") {
+  // Parse and validate with Zod
+  const result = CheckpointerConfigSchema.safeParse(rawConfig);
+  if (!result.success) {
     throw new Error(
-      `Invalid CHECKPOINTER_TYPE: "${type}". ` +
-        `Must be one of: "memory", "sqlite". ` +
-        `Received: ${JSON.stringify(type)}`
+      `Invalid checkpointer configuration: ${result.error.errors
+        .map((e) => `${e.path.join(".")}: ${e.message}`)
+        .join(", ")}`
     );
   }
 
-  return {
-    type,
-    sqlitePath: process.env.CHECKPOINTER_SQLITE_PATH
-  };
+  return result.data;
 }

@@ -87,6 +87,7 @@ export class TokenBudget {
   /**
    * Truncate text to fit within token limit.
    * Uses tiktoken for accurate token-based truncation.
+   * Attempts to truncate at sentence boundaries when possible to avoid mid-word cuts.
    */
   truncateToFit(text: string, maxTokens: number): string {
     if (!text) return text;
@@ -98,12 +99,61 @@ export class TokenBudget {
       const encoder = getEncoder();
       const tokens = encoder.encode(text);
       const truncatedTokens = tokens.slice(0, maxTokens);
-      const truncated = encoder.decode(truncatedTokens);
+      let truncated = encoder.decode(truncatedTokens);
+
+      // Try to find a sentence boundary near the truncation point
+      // Look backwards from the truncation point for sentence endings
+      const sentenceEndings = /[.!?]\s+/g;
+      const truncatedLength = truncated.length;
+
+      // Search backwards from truncation point (within 20% of text length)
+      const searchStart = Math.max(
+        0,
+        truncatedLength - Math.floor(truncatedLength * 0.2)
+      );
+      const searchText = truncated.slice(searchStart);
+
+      // Find the last sentence boundary in the search area
+      let lastMatch: RegExpMatchArray | null = null;
+      let match: RegExpExecArray | null;
+
+      // Create a new regex instance for each search to avoid lastIndex issues
+      const regex = new RegExp(sentenceEndings);
+      while ((match = regex.exec(searchText)) !== null) {
+        lastMatch = match;
+      }
+
+      // If we found a sentence boundary, truncate there instead
+      if (lastMatch && lastMatch.index !== undefined) {
+        const boundaryPos = searchStart + lastMatch.index + lastMatch[0].length;
+        // Verify this position is still within token budget
+        const boundaryText = text.slice(0, boundaryPos);
+        const boundaryTokens = this.estimateTokens(boundaryText);
+
+        if (boundaryTokens <= maxTokens) {
+          truncated = boundaryText;
+          logger.debug("Text truncated at sentence boundary", {
+            originalTokens: currentTokens,
+            targetTokens: maxTokens,
+            actualTruncatedTokens: boundaryTokens,
+            truncatedAt: boundaryPos
+          });
+        } else {
+          logger.debug(
+            "Sentence boundary exceeds token budget, using token-based truncation",
+            {
+              originalTokens: currentTokens,
+              targetTokens: maxTokens,
+              boundaryTokens
+            }
+          );
+        }
+      }
 
       logger.debug("Text truncated", {
         originalTokens: currentTokens,
         targetTokens: maxTokens,
-        actualTruncatedTokens: truncatedTokens.length
+        actualTruncatedTokens: this.estimateTokens(truncated)
       });
 
       return truncated + "...[truncated]";
@@ -113,7 +163,32 @@ export class TokenBudget {
         error: error instanceof Error ? error.message : String(error)
       });
       const targetChars = Math.floor(maxTokens * FALLBACK_CHARS_PER_TOKEN);
-      return text.slice(0, targetChars) + "...[truncated]";
+      let truncated = text.slice(0, targetChars);
+
+      // Try to find sentence boundary in fallback mode too
+      const sentenceEndings = /[.!?]\s+/g;
+      const searchStart = Math.max(
+        0,
+        targetChars - Math.floor(targetChars * 0.2)
+      );
+      const searchText = truncated.slice(searchStart);
+
+      let lastMatch: RegExpMatchArray | null = null;
+      let match: RegExpExecArray | null;
+      // Create a new regex instance for each search to avoid lastIndex issues
+      const regex = new RegExp(sentenceEndings);
+      while ((match = regex.exec(searchText)) !== null) {
+        lastMatch = match;
+      }
+
+      if (lastMatch && lastMatch.index !== undefined) {
+        const boundaryPos = searchStart + lastMatch.index + lastMatch[0].length;
+        if (boundaryPos <= targetChars) {
+          truncated = text.slice(0, boundaryPos);
+        }
+      }
+
+      return truncated + "...[truncated]";
     }
   }
 

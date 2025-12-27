@@ -1,9 +1,11 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { HumanMessage } from "@langchain/core/messages";
+import { MemorySaver } from "@langchain/langgraph";
 import {
-  buildResearchGraph,
+  compileResearchGraph,
   type ResearchGraph
 } from "../../src/graph/workflow.js";
+import { AgentNames } from "../../src/graph/routes.js";
 
 // Skip if no API key (these tests require real LLM)
 const hasApiKey = !!process.env.ANTHROPIC_API_KEY;
@@ -12,7 +14,7 @@ describe("Happy Path Integration", () => {
   let graph: ResearchGraph;
 
   beforeEach(() => {
-    graph = buildResearchGraph();
+    graph = compileResearchGraph(new MemorySaver());
   });
 
   describe.skipIf(!hasApiKey)("with real LLM", () => {
@@ -66,7 +68,7 @@ describe("Happy Path Integration", () => {
       );
 
       // Graph should complete without crashing
-      expect(result.currentAgent).toBe("synthesis");
+      expect(result.currentAgent).toBe(AgentNames.SYNTHESIS);
       expect(result.finalSummary).toBeDefined();
     });
   });

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { TavilyDataSource } from "../../src/data/tavily-source.js";
+import { TavilyDataSource } from "../../src/sources/tavily-source.js";
 
 const hasTavilyKey = !!process.env.TAVILY_API_KEY;
 

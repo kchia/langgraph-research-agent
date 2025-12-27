@@ -6,11 +6,11 @@ import {
 } from "../utils/constants.js";
 import { Logger } from "../utils/logger.js";
 import {
-  Routes,
+  AgentNames,
   type ClarityRoute,
   type ResearchRoute,
   type ValidationRoute
-} from "../types/routes.js";
+} from "./routes.js";
 
 const logger = new Logger("routers");
 
@@ -53,17 +53,17 @@ function validateResearchAttempts(attempts: unknown): number | null {
  * Should be called first in any router to catch errors.
  *
  * @param state - Current state
- * @returns Routes.ERROR_RECOVERY if error present, null otherwise
+ * @returns AgentNames.ERROR_RECOVERY if error present, null otherwise
  */
 export function checkForError(
   state: ResearchState
-): typeof Routes.ERROR_RECOVERY | null {
+): typeof AgentNames.ERROR_RECOVERY | null {
   if (state.errorContext) {
     logger.warn("Error detected in state, routing to error recovery", {
       failedNode: state.errorContext.failedNode,
       errorMessage: state.errorContext.errorMessage
     });
-    return Routes.ERROR_RECOVERY;
+    return AgentNames.ERROR_RECOVERY;
   }
   return null;
 }
@@ -71,7 +71,7 @@ export function checkForError(
 /**
  * Routes from Clarity Agent based on query clarity.
  *
- * @returns Routes.INTERRUPT if clarification needed, Routes.RESEARCH if clear
+ * @returns AgentNames.INTERRUPT if clarification needed, AgentNames.RESEARCH if clear
  */
 export function clarityRouter(state: ResearchState): ClarityRoute {
   // Check for errors first
@@ -80,8 +80,8 @@ export function clarityRouter(state: ResearchState): ClarityRoute {
 
   const route =
     state.clarityStatus === "needs_clarification"
-      ? Routes.INTERRUPT
-      : Routes.RESEARCH;
+      ? AgentNames.INTERRUPT
+      : AgentNames.RESEARCH;
 
   logger.debug("Clarity router decision", {
     clarityStatus: state.clarityStatus,
@@ -90,7 +90,7 @@ export function clarityRouter(state: ResearchState): ClarityRoute {
   });
 
   // Edge case: clear status but no company detected
-  if (route === Routes.RESEARCH && !state.detectedCompany) {
+  if (route === AgentNames.RESEARCH && !state.detectedCompany) {
     logger.warn(
       "Proceeding to research without detected company - may result in poor results"
     );
@@ -102,7 +102,7 @@ export function clarityRouter(state: ResearchState): ClarityRoute {
 /**
  * Routes from Research Agent based on confidence score.
  *
- * @returns Routes.SYNTHESIS if confidence >= threshold, Routes.VALIDATOR otherwise
+ * @returns AgentNames.SYNTHESIS if confidence >= threshold, AgentNames.VALIDATOR otherwise
  */
 export function researchRouter(state: ResearchState): ResearchRoute {
   // Check for errors first
@@ -112,7 +112,7 @@ export function researchRouter(state: ResearchState): ResearchRoute {
   // Edge case: no findings at all should go to synthesis for fallback
   if (!state.researchFindings) {
     logger.warn("No research findings - routing to synthesis for fallback");
-    return Routes.SYNTHESIS;
+    return AgentNames.SYNTHESIS;
   }
 
   // Validate confidence score using Zod
@@ -122,13 +122,13 @@ export function researchRouter(state: ResearchState): ResearchRoute {
       "Invalid confidence score, defaulting to validator for validation",
       { confidenceScore: state.confidenceScore }
     );
-    return Routes.VALIDATOR;
+    return AgentNames.VALIDATOR;
   }
 
   const route =
     validatedConfidence >= CONFIDENCE_THRESHOLD
-      ? Routes.SYNTHESIS
-      : Routes.VALIDATOR;
+      ? AgentNames.SYNTHESIS
+      : AgentNames.VALIDATOR;
 
   logger.debug("Research router decision", {
     confidenceScore: validatedConfidence,
@@ -145,7 +145,7 @@ export function researchRouter(state: ResearchState): ResearchRoute {
  *
  * Implements loop protection: max 3 research attempts.
  *
- * @returns Routes.RESEARCH for retry, Routes.SYNTHESIS to proceed
+ * @returns AgentNames.RESEARCH for retry, AgentNames.SYNTHESIS to proceed
  */
 export function validationRouter(state: ResearchState): ValidationRoute {
   // Check for errors first
@@ -161,7 +161,7 @@ export function validationRouter(state: ResearchState): ValidationRoute {
         researchAttempts: state.researchAttempts
       }
     );
-    return Routes.SYNTHESIS;
+    return AgentNames.SYNTHESIS;
   }
 
   // Validate researchAttempts using Zod
@@ -170,27 +170,27 @@ export function validationRouter(state: ResearchState): ValidationRoute {
     logger.warn("Invalid researchAttempts, defaulting to synthesis", {
       researchAttempts: state.researchAttempts
     });
-    return Routes.SYNTHESIS;
+    return AgentNames.SYNTHESIS;
   }
 
   const canRetry = validatedAttempts < MAX_RESEARCH_ATTEMPTS;
   const needsMoreResearch = state.validationResult === "insufficient";
 
-  let route: typeof Routes.RESEARCH | typeof Routes.SYNTHESIS;
+  let route: typeof AgentNames.RESEARCH | typeof AgentNames.SYNTHESIS;
   let reason: string;
 
   if (needsMoreResearch && canRetry) {
-    route = Routes.RESEARCH;
+    route = AgentNames.RESEARCH;
     reason = "Validation insufficient, retrying research";
   } else if (needsMoreResearch && !canRetry) {
-    route = Routes.SYNTHESIS;
+    route = AgentNames.SYNTHESIS;
     reason = `Max research attempts (${MAX_RESEARCH_ATTEMPTS}) reached - proceeding with available data`;
     logger.warn(reason, {
       validationResult: state.validationResult,
       researchAttempts: state.researchAttempts
     });
   } else {
-    route = Routes.SYNTHESIS;
+    route = AgentNames.SYNTHESIS;
     reason = "Validation sufficient";
   }
 

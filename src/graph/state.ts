@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { Annotation, MessagesAnnotation } from "@langchain/langgraph";
+import type { AgentName } from "./routes.js";
+import { AgentNames } from "./routes.js";
+
+// Re-export AgentName for convenience (it's defined in routes.ts)
+export type { AgentName } from "./routes.js";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPE DEFINITIONS
@@ -14,17 +19,6 @@ export type ClarityStatus = "pending" | "clear" | "needs_clarification";
  * Validation result from the Validator Agent
  */
 export type ValidationResult = "pending" | "sufficient" | "insufficient";
-
-/**
- * Agent identifiers for observability and routing
- */
-export type AgentName =
-  | "clarity"
-  | "research"
-  | "validator"
-  | "synthesis"
-  | "interrupt"
-  | "error-recovery";
 
 /**
  * Zod schema for structured research findings from data sources.
@@ -273,7 +267,7 @@ export const ResearchStateAnnotation = Annotation.Root({
    */
   currentAgent: Annotation<AgentName>({
     reducer: lastWriteWins,
-    default: () => "clarity"
+    default: () => AgentNames.CLARITY
   }),
 
   // ─── Error Handling ───

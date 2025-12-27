@@ -4,7 +4,8 @@ import type {
   ResearchDataSource,
   SearchContext,
   SearchResult
-} from "../../src/data/data-source.interface.js";
+} from "../../src/sources/data-source.interface.js";
+import { AgentNames } from "../../src/graph/routes.js";
 
 /**
  * Create a test state with sensible defaults.
@@ -28,7 +29,7 @@ export function createTestState(
     validationResult: "pending",
     validationFeedback: null,
     finalSummary: null,
-    currentAgent: "clarity",
+    currentAgent: AgentNames.CLARITY,
     errorContext: null,
     correlationId: null,
     ...overrides
@@ -60,7 +61,10 @@ export function createMockLLMSimple(responseContent: string) {
   return {
     invoke: invokeMock,
     _invokeMock: invokeMock
-  } as unknown as { invoke: ReturnType<typeof vi.fn>; _invokeMock: ReturnType<typeof vi.fn> };
+  } as unknown as {
+    invoke: ReturnType<typeof vi.fn>;
+    _invokeMock: ReturnType<typeof vi.fn>;
+  };
 }
 
 /**

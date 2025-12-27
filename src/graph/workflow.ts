@@ -11,6 +11,7 @@ import {
   errorRecoveryAgent
 } from "../agents/index.js";
 import { withErrorHandling } from "../utils/error-wrapper.js";
+import { AgentNames } from "./routes.js";
 
 /**
  * Builds and compiles the Research Assistant workflow graph.
@@ -36,46 +37,58 @@ export function buildResearchWorkflow() {
       // and route them to error-recovery. Interrupt and error-recovery are NOT
       // wrapped: interrupt uses special interrupt() behavior, error-recovery
       // would create infinite loops if wrapped.
-      .addNode("clarity", withErrorHandling("clarity", clarityAgent))
-      .addNode("interrupt", clarificationInterrupt)
-      .addNode("research", withErrorHandling("research", researchAgent))
-      .addNode("validator", withErrorHandling("validator", validatorAgent))
-      .addNode("synthesis", withErrorHandling("synthesis", synthesisAgent))
-      .addNode("error-recovery", errorRecoveryAgent)
+      .addNode(
+        AgentNames.CLARITY,
+        withErrorHandling(AgentNames.CLARITY, clarityAgent)
+      )
+      .addNode(AgentNames.INTERRUPT, clarificationInterrupt)
+      .addNode(
+        AgentNames.RESEARCH,
+        withErrorHandling(AgentNames.RESEARCH, researchAgent)
+      )
+      .addNode(
+        AgentNames.VALIDATOR,
+        withErrorHandling(AgentNames.VALIDATOR, validatorAgent)
+      )
+      .addNode(
+        AgentNames.SYNTHESIS,
+        withErrorHandling(AgentNames.SYNTHESIS, synthesisAgent)
+      )
+      .addNode(AgentNames.ERROR_RECOVERY, errorRecoveryAgent)
 
       // ─── Entry Edge ───
-      .addEdge(START, "clarity")
+      .addEdge(START, AgentNames.CLARITY)
 
       // ─── Clarity Routing ───
-      .addConditionalEdges("clarity", clarityRouter, {
-        interrupt: "interrupt",
-        research: "research",
-        "error-recovery": "error-recovery"
+      .addConditionalEdges(AgentNames.CLARITY, clarityRouter, {
+        [AgentNames.INTERRUPT]: AgentNames.INTERRUPT,
+        [AgentNames.RESEARCH]: AgentNames.RESEARCH,
+        [AgentNames.ERROR_RECOVERY]: AgentNames.ERROR_RECOVERY
       })
 
       // ─── Interrupt Resume Edge ───
       // Fixed edge: after resume, always re-analyze in clarity
-      .addEdge("interrupt", "clarity")
+      .addEdge(AgentNames.INTERRUPT, AgentNames.CLARITY)
 
       // ─── Research Routing ───
-      .addConditionalEdges("research", researchRouter, {
-        validator: "validator",
-        synthesis: "synthesis",
-        "error-recovery": "error-recovery"
+      .addConditionalEdges(AgentNames.RESEARCH, researchRouter, {
+        [AgentNames.VALIDATOR]: AgentNames.VALIDATOR,
+        [AgentNames.SYNTHESIS]: AgentNames.SYNTHESIS,
+        [AgentNames.ERROR_RECOVERY]: AgentNames.ERROR_RECOVERY
       })
 
       // ─── Validation Routing ───
-      .addConditionalEdges("validator", validationRouter, {
-        research: "research",
-        synthesis: "synthesis",
-        "error-recovery": "error-recovery"
+      .addConditionalEdges(AgentNames.VALIDATOR, validationRouter, {
+        [AgentNames.RESEARCH]: AgentNames.RESEARCH,
+        [AgentNames.SYNTHESIS]: AgentNames.SYNTHESIS,
+        [AgentNames.ERROR_RECOVERY]: AgentNames.ERROR_RECOVERY
       })
 
       // ─── Synthesis Terminal Edge ───
-      .addEdge("synthesis", END)
+      .addEdge(AgentNames.SYNTHESIS, END)
 
       // ─── Error Recovery Terminal Edge ───
-      .addEdge("error-recovery", END)
+      .addEdge(AgentNames.ERROR_RECOVERY, END)
   );
 }
 

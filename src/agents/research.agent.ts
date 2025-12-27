@@ -2,10 +2,11 @@ import type { ResearchState } from "../graph/state.js";
 import type {
   ResearchDataSource,
   SearchContext
-} from "../data/data-source.interface.js";
-import { DataSourceError } from "../data/data-source.interface.js";
-import { createDataSource } from "../data/index.js";
-import { Logger, createLoggerWithCorrelationId } from "../utils/logger.js";
+} from "../sources/data-source.interface.js";
+import { DataSourceError } from "../sources/data-source.interface.js";
+import { createDataSource } from "../sources/index.js";
+import { createLoggerWithCorrelationId } from "../utils/logger.js";
+import { AgentNames } from "../graph/routes.js";
 
 /**
  * Factory function to create Research Agent with injectable data source.
@@ -36,7 +37,7 @@ export function createResearchAgent(dataSource?: ResearchDataSource) {
         researchFindings: null,
         confidenceScore: 0,
         researchAttempts: attemptNumber,
-        currentAgent: "research"
+        currentAgent: AgentNames.RESEARCH
       };
     }
 
@@ -60,7 +61,7 @@ export function createResearchAgent(dataSource?: ResearchDataSource) {
         researchFindings: result.findings,
         confidenceScore: result.confidence,
         researchAttempts: attemptNumber,
-        currentAgent: "research"
+        currentAgent: AgentNames.RESEARCH
       };
     } catch (error) {
       if (error instanceof DataSourceError) {
@@ -82,7 +83,7 @@ export function createResearchAgent(dataSource?: ResearchDataSource) {
         researchFindings: null,
         confidenceScore: 0,
         researchAttempts: attemptNumber,
-        currentAgent: "research"
+        currentAgent: AgentNames.RESEARCH
       };
     }
   };

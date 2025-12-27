@@ -10,12 +10,12 @@ import {
 } from "../prompts/clarity.prompts.js";
 import { Logger, createLoggerWithCorrelationId } from "../utils/logger.js";
 import { getLLM, supportsStructuredOutput } from "../utils/llm-factory.js";
-import { TokenBudget } from "../utils/token-budget.js";
 import {
   summarizeMessages,
   buildConversationContext
 } from "../utils/message-summarization.js";
-import { normalizeCompanyName } from "../data/company-normalization.js";
+import { normalizeCompanyName } from "../sources/company-normalization.js";
+import { AgentNames } from "../graph/routes.js";
 
 // Logger is created per-request with correlation ID from state
 
@@ -85,7 +85,7 @@ export function createClarityAgent(llm?: BaseChatModel) {
         detectedCompany: fallbackCompany
           ? normalizeCompanyName(fallbackCompany)
           : null,
-        currentAgent: "clarity"
+        currentAgent: AgentNames.CLARITY
       };
     }
 
@@ -98,7 +98,7 @@ export function createClarityAgent(llm?: BaseChatModel) {
         clarificationQuestion:
           "Hello! What would you like to know about a company?",
         clarificationAttempts: state.clarificationAttempts + 1,
-        currentAgent: "clarity"
+        currentAgent: AgentNames.CLARITY
       };
     }
 
@@ -110,7 +110,7 @@ export function createClarityAgent(llm?: BaseChatModel) {
         detectedCompany: null,
         finalSummary:
           "No problem! Let me know if you'd like to research anything else.",
-        currentAgent: "clarity"
+        currentAgent: AgentNames.CLARITY
       };
     }
 
@@ -121,7 +121,7 @@ export function createClarityAgent(llm?: BaseChatModel) {
       });
       return {
         clarityStatus: "clear",
-        currentAgent: "clarity"
+        currentAgent: AgentNames.CLARITY
       };
     }
 
@@ -170,7 +170,7 @@ export function createClarityAgent(llm?: BaseChatModel) {
           clarityStatus: "clear",
           detectedCompany: normalizedCompany,
           clarificationQuestion: null,
-          currentAgent: "clarity"
+          currentAgent: AgentNames.CLARITY
         };
         // Only include conversationSummary if it was created
         if (conversationSummary) {
@@ -208,7 +208,7 @@ export function createClarityAgent(llm?: BaseChatModel) {
         return {
           clarityStatus: "clear",
           detectedCompany: normalizedCompany,
-          currentAgent: "clarity"
+          currentAgent: AgentNames.CLARITY
         };
       }
 

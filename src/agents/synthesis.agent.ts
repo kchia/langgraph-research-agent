@@ -9,6 +9,7 @@ import {
 import { createLoggerWithCorrelationId } from "../utils/logger.js";
 import { getLLM } from "../utils/llm-factory.js";
 import { TokenBudget } from "../utils/token-budget.js";
+import { AgentNames } from "../graph/routes.js";
 
 /**
  * Factory function to create Synthesis Agent with injectable LLM.
@@ -36,7 +37,7 @@ export function createSynthesisAgent(llm?: BaseChatModel) {
       return {
         finalSummary: noDataSummary,
         messages: [new AIMessage(noDataSummary)],
-        currentAgent: "synthesis"
+        currentAgent: AgentNames.SYNTHESIS
       };
     }
 
@@ -94,7 +95,7 @@ export function createSynthesisAgent(llm?: BaseChatModel) {
       return {
         finalSummary: prefixedSummary,
         messages: [new AIMessage(prefixedSummary)],
-        currentAgent: "synthesis"
+        currentAgent: AgentNames.SYNTHESIS
       };
     } catch (error) {
       logger.error("Synthesis agent LLM call failed", {
@@ -108,7 +109,7 @@ export function createSynthesisAgent(llm?: BaseChatModel) {
       return {
         finalSummary: fallbackSummary,
         messages: [new AIMessage(fallbackSummary)],
-        currentAgent: "synthesis"
+        currentAgent: AgentNames.SYNTHESIS
       };
     }
   };

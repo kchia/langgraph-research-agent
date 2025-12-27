@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   Logger,
   generateCorrelationId,
@@ -17,20 +17,24 @@ describe("logger correlation IDs", () => {
   });
 
   describe("generateCorrelationId", () => {
+    const UUID_REGEX = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
+
     it("should generate unique correlation IDs", () => {
       const id1 = generateCorrelationId();
       const id2 = generateCorrelationId();
 
-      expect(id1).toBeTruthy();
-      expect(id2).toBeTruthy();
+      // Both IDs should be valid UUIDs
+      expect(id1).toMatch(UUID_REGEX);
+      expect(id2).toMatch(UUID_REGEX);
+      // IDs should be different
       expect(id1).not.toBe(id2);
-      expect(typeof id1).toBe("string");
     });
 
     it("should generate IDs with expected format", () => {
       const id = generateCorrelationId();
-      // Format: timestamp-random (e.g., "lxyz123-abc456")
-      expect(id).toMatch(/^[a-z0-9]+-[a-z0-9]+$/);
+      // Format: UUID (e.g., "ce8af133-1d74-4b7e-9753-cab6a0dd55ee")
+      expect(id).toMatch(UUID_REGEX);
+      expect(id.length).toBe(36); // UUID length with dashes
     });
   });
 

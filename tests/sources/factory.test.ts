@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { createDataSource } from "../../src/data/index.js";
+import { createDataSource } from "../../src/sources/index.js";
 
 describe("createDataSource factory", () => {
   let originalDataSource: string | undefined;

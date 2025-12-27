@@ -9,7 +9,7 @@
  * Default company name mapping.
  * Maps common variations (lowercase keys) to standardized company names.
  */
-export const DEFAULT_COMPANY_MAP: Record<string, string> = {
+const DEFAULT_COMPANY_MAP: Record<string, string> = {
   apple: "Apple Inc.",
   tesla: "Tesla, Inc.",
   microsoft: "Microsoft Corporation",
@@ -25,7 +25,7 @@ export const DEFAULT_COMPANY_MAP: Record<string, string> = {
 /**
  * Common company suffixes that indicate a properly formatted name.
  */
-export const COMPANY_SUFFIXES = [
+const COMPANY_SUFFIXES = [
   "Inc.",
   "Corporation",
   "Corp.",
@@ -54,7 +54,7 @@ export interface CompanyNormalizationConfig {
 /**
  * Default normalization configuration.
  */
-export const DEFAULT_NORMALIZATION_CONFIG: CompanyNormalizationConfig = {
+const DEFAULT_NORMALIZATION_CONFIG: CompanyNormalizationConfig = {
   companyMap: DEFAULT_COMPANY_MAP,
   suffixes: COMPANY_SUFFIXES
 };
@@ -97,22 +97,4 @@ export function normalizeCompanyName(
 
   // Return as-is if no normalization found
   return normalized;
-}
-
-/**
- * Create a custom normalization configuration by merging with defaults.
- *
- * @param overrides - Partial configuration to override defaults
- * @returns Complete normalization configuration
- */
-export function createNormalizationConfig(
-  overrides: Partial<CompanyNormalizationConfig>
-): CompanyNormalizationConfig {
-  return {
-    companyMap: {
-      ...DEFAULT_COMPANY_MAP,
-      ...overrides.companyMap
-    },
-    suffixes: overrides.suffixes ?? COMPANY_SUFFIXES
-  };
 }

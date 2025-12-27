@@ -5,6 +5,7 @@ import {
   buildConversationContext
 } from "../../src/utils/message-summarization.js";
 import { getLLM } from "../../src/utils/llm-factory.js";
+import { AgentNames } from "../../src/graph/routes.js";
 
 // Mock the LLM factory
 vi.mock("../../src/utils/llm-factory.js", () => ({
@@ -54,7 +55,7 @@ describe("message-summarization", () => {
 
       expect(result).toBeTruthy();
       expect(result).toContain("Summary");
-      expect(getLLM).toHaveBeenCalledWith("synthesis");
+      expect(getLLM).toHaveBeenCalledWith(AgentNames.SYNTHESIS);
     });
 
     it("should return null on summarization error", async () => {

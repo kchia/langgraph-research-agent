@@ -8,6 +8,7 @@ import {
 } from "../../src/graph/state.js";
 import { clarityRouter } from "../../src/graph/routers.js";
 import { clarificationInterrupt } from "../../src/agents/interrupt.agent.js";
+import { AgentNames } from "../../src/graph/routes.js";
 
 /**
  * Build a minimal graph to test interrupt flow specifically.
@@ -17,17 +18,17 @@ function buildInterruptTestGraph(
   clarityBehavior: (state: ResearchState) => Partial<ResearchState>
 ) {
   const workflow = new StateGraph(ResearchStateAnnotation)
-    .addNode("clarity", clarityBehavior)
-    .addNode("interrupt", clarificationInterrupt)
+    .addNode(AgentNames.CLARITY, clarityBehavior)
+    .addNode(AgentNames.INTERRUPT, clarificationInterrupt)
     .addNode("end", (state) => ({
       finalSummary: `Completed for ${state.detectedCompany}`
     }))
-    .addEdge(START, "clarity")
-    .addConditionalEdges("clarity", clarityRouter, {
-      interrupt: "interrupt",
-      research: "end"
+    .addEdge(START, AgentNames.CLARITY)
+    .addConditionalEdges(AgentNames.CLARITY, clarityRouter, {
+      [AgentNames.INTERRUPT]: AgentNames.INTERRUPT,
+      [AgentNames.RESEARCH]: "end"
     })
-    .addEdge("interrupt", "clarity")
+    .addEdge(AgentNames.INTERRUPT, AgentNames.CLARITY)
     .addEdge("end", END);
 
   return workflow.compile({ checkpointer: new MemorySaver() });
@@ -45,7 +46,7 @@ describe("Interrupt Flow Integration", () => {
           clarityStatus: "needs_clarification",
           clarificationQuestion: "Which company?",
           clarificationAttempts: 1,
-          currentAgent: "clarity"
+          currentAgent: AgentNames.CLARITY
         };
       }
       return {
@@ -58,7 +59,7 @@ describe("Interrupt Flow Integration", () => {
     };
 
     const graph = buildInterruptTestGraph(clarityBehavior);
-    const config = { configurable: { thread_id: "interrupt-test-1" } };
+    const config = { configurable: { thread_id: crypto.randomUUID() } };
 
     // Initial query - should interrupt
     const result1 = await graph.invoke(
@@ -72,7 +73,7 @@ describe("Interrupt Flow Integration", () => {
     // Check that interrupt occurred by examining graph state
     // When interrupt occurs, graph state shows next node is "interrupt"
     const state1 = await graph.getState(config);
-    expect(state1.next).toContain("interrupt");
+    expect(state1.next).toContain(AgentNames.INTERRUPT);
     expect(result1.clarificationQuestion).toBe("Which company?");
 
     // Resume with clarification
@@ -99,7 +100,7 @@ describe("Interrupt Flow Integration", () => {
           clarificationQuestion:
             callCount === 1 ? "Which company?" : "Can you be more specific?",
           clarificationAttempts: callCount,
-          currentAgent: "clarity"
+          currentAgent: AgentNames.CLARITY
         };
       }
       return {
@@ -110,7 +111,7 @@ describe("Interrupt Flow Integration", () => {
     };
 
     const graph = buildInterruptTestGraph(clarityBehavior);
-    const config = { configurable: { thread_id: "double-interrupt-test" } };
+    const config = { configurable: { thread_id: crypto.randomUUID() } };
 
     // First query
     const result1 = await graph.invoke(
@@ -122,7 +123,7 @@ describe("Interrupt Flow Integration", () => {
     );
     // Check that interrupt occurred
     const state1 = await graph.getState(config);
-    expect(state1.next).toContain("interrupt");
+    expect(state1.next).toContain(AgentNames.INTERRUPT);
     expect(result1.clarificationQuestion).toBe("Which company?");
 
     // First resume - still unclear
@@ -156,7 +157,7 @@ describe("Interrupt Flow Integration", () => {
           clarityStatus: "needs_clarification",
           clarificationQuestion: "Which company?",
           clarificationAttempts: 1,
-          currentAgent: "clarity"
+          currentAgent: AgentNames.CLARITY
         };
       }
       return {
@@ -167,7 +168,7 @@ describe("Interrupt Flow Integration", () => {
     };
 
     const graph = buildInterruptTestGraph(clarityBehavior);
-    const threadId = "thread-state-test";
+    const threadId = crypto.randomUUID();
 
     // Initial with thread ID
     await graph.invoke(

@@ -8,10 +8,7 @@
 import {
   circuitBreaker,
   ConsecutiveBreaker,
-  ExponentialBackoff,
   handleAll,
-  retry,
-  wrap,
   type IPolicy
 } from "cockatiel";
 import { Logger } from "./logger.js";
@@ -75,49 +72,3 @@ export function createCircuitBreaker(
   return breaker;
 }
 
-/**
- * Create a combined resilience policy with retry and circuit breaker.
- *
- * The policy applies retry first (inner), then circuit breaker (outer).
- * This means:
- * - Retries happen within a single circuit breaker "attempt"
- * - If all retries fail, that counts as one circuit breaker failure
- * - When circuit is open, requests fail fast without retrying
- *
- * @param serviceName - Name of the service (for logging)
- * @param retryConfig - Retry configuration
- * @param circuitConfig - Circuit breaker configuration
- * @returns Combined resilience policy
- */
-export function createResiliencePolicy(
-  serviceName: string,
-  retryConfig: {
-    maxRetries?: number;
-    baseDelayMs?: number;
-    maxDelayMs?: number;
-  } = {},
-  circuitConfig: Partial<CircuitBreakerConfig> = {}
-): IPolicy {
-  const retryPolicy = retry(handleAll, {
-    maxAttempts: (retryConfig.maxRetries ?? 2) + 1,
-    backoff: new ExponentialBackoff({
-      initialDelay: retryConfig.baseDelayMs ?? 1000,
-      maxDelay: retryConfig.maxDelayMs ?? 30000
-    })
-  });
-
-  const circuitBreakerPolicy = createCircuitBreaker(serviceName, circuitConfig);
-
-  // Wrap: circuit breaker is outer, retry is inner
-  return wrap(circuitBreakerPolicy, retryPolicy);
-}
-
-/**
- * Pre-configured circuit breaker for Tavily API.
- *
- * Opens after 5 consecutive failures, half-open after 30 seconds.
- */
-export const tavilyCircuitBreaker = createCircuitBreaker("Tavily", {
-  consecutiveFailures: 5,
-  halfOpenAfterMs: 30000
-});
