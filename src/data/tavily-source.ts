@@ -152,13 +152,19 @@ export class TavilyDataSource implements ResearchDataSource {
       }
 
       const retryable = isRetryableError(error);
+      // Extract structured error properties for reliable detection
+      const anyError = error as Record<string, unknown>;
       throw new DataSourceError(
         isCircuitOpen
           ? "Tavily service temporarily unavailable (circuit breaker open)"
           : `Tavily search failed: ${error instanceof Error ? error.message : "Unknown"}`,
         this.getName(),
         retryable,
-        error instanceof Error ? error : undefined
+        {
+          originalError: error instanceof Error ? error : undefined,
+          statusCode: typeof anyError.status === "number" ? anyError.status : undefined,
+          errorCode: typeof anyError.code === "string" ? anyError.code : undefined
+        }
       );
     }
   }

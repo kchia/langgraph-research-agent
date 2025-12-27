@@ -63,16 +63,48 @@ export interface ResearchDataSource {
 }
 
 /**
+ * Options for creating a DataSourceError.
+ */
+export interface DataSourceErrorOptions {
+  /** The original error that caused this failure */
+  originalError?: Error;
+  /** HTTP status code if applicable */
+  statusCode?: number;
+  /** Node.js or system error code (e.g., ECONNRESET) */
+  errorCode?: string;
+}
+
+/**
  * Error thrown when a data source fails.
+ * Includes structured properties for reliable error detection.
  */
 export class DataSourceError extends Error {
+  readonly source: string;
+  readonly isRetryable: boolean;
+  readonly originalError?: Error;
+  /** HTTP status code if applicable (e.g., 429, 503) */
+  readonly statusCode?: number;
+  /** Node.js or system error code (e.g., ECONNRESET) */
+  readonly errorCode?: string;
+
   constructor(
     message: string,
-    public readonly source: string,
-    public readonly isRetryable: boolean,
-    public readonly originalError?: Error
+    source: string,
+    isRetryable: boolean,
+    options?: DataSourceErrorOptions | Error
   ) {
     super(message);
     this.name = "DataSourceError";
+    this.source = source;
+    this.isRetryable = isRetryable;
+
+    // Support both old signature (Error) and new signature (options)
+    if (options instanceof Error) {
+      this.originalError = options;
+    } else if (options) {
+      this.originalError = options.originalError;
+      this.statusCode = options.statusCode;
+      this.errorCode = options.errorCode;
+    }
   }
 }
