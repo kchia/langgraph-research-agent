@@ -114,18 +114,12 @@ export function createValidatorAgent(llm?: BaseChatModel) {
         hasFindings: !!state.researchFindings
       });
 
-      // Fallback: simple rule-based validation
-      const hasAllFields = !!(
-        state.researchFindings.recentNews &&
-        state.researchFindings.stockInfo &&
-        state.researchFindings.keyDevelopments
-      );
+      // Fallback: rule-based validation aligned with LLM evaluation criteria
+      const fallbackResult = ruleBasedValidation(state.researchFindings);
 
       return {
-        validationResult: hasAllFields ? "sufficient" : "insufficient",
-        validationFeedback: hasAllFields
-          ? null
-          : "Some research fields are incomplete.",
+        validationResult: fallbackResult.result,
+        validationFeedback: fallbackResult.feedback,
         currentAgent: "validator"
       };
     }
@@ -140,6 +134,57 @@ Recent News: ${findings.recentNews ?? "Not available"}
 Stock Info: ${findings.stockInfo ?? "Not available"}
 Key Developments: ${findings.keyDevelopments ?? "Not available"}
 Sources: ${findings.sources.join(", ") || "None"}`;
+}
+
+/**
+ * Rule-based validation fallback aligned with LLM evaluation criteria.
+ *
+ * Criteria (matching what the LLM evaluates):
+ * 1. Must have either recent news OR key developments (not all required)
+ * 2. Should have at least 2 sources for verification
+ * 3. Stock info is optional but contributes to sufficiency
+ */
+function ruleBasedValidation(
+  findings: ResearchState["researchFindings"]
+): { result: "sufficient" | "insufficient"; feedback: string | null } {
+  if (!findings) {
+    return {
+      result: "insufficient",
+      feedback: "No research findings available"
+    };
+  }
+
+  const issues: string[] = [];
+
+  // Criterion 1: Must have recent news OR key developments
+  const hasContextualInfo = !!(findings.recentNews || findings.keyDevelopments);
+  if (!hasContextualInfo) {
+    issues.push("Missing both recent news and key developments");
+  }
+
+  // Criterion 2: Should have at least 2 sources
+  const hasSufficientSources = findings.sources && findings.sources.length >= 2;
+  if (!hasSufficientSources) {
+    issues.push("Insufficient source verification (need at least 2 sources)");
+  }
+
+  // Stock info is optional but noted
+  const hasStockInfo = !!findings.stockInfo;
+
+  // Sufficient if we have contextual info AND sources
+  if (hasContextualInfo && hasSufficientSources) {
+    return {
+      result: "sufficient",
+      feedback: hasStockInfo
+        ? null
+        : "Findings adequate; stock data unavailable"
+    };
+  }
+
+  return {
+    result: "insufficient",
+    feedback: issues.join("; ")
+  };
 }
 
 // Default export for graph
