@@ -1,0 +1,247 @@
+houchia@MacBook-Pro-2 langgraph-research-assistant % npm start
+
+> research-assistant@1.0.0 start
+> tsx src/index.ts
+
+[2025-12-27T10:14:54.555Z] [INFO] [llm-factory] Creating LLM instance {
+  "agentType": "clarity",
+  "model": "claude-sonnet-4-20250514"
+}
+[2025-12-27T10:14:54.558Z] [INFO] [data-source-factory] Using Tavily data source
+[2025-12-27T10:14:54.559Z] [INFO] [llm-factory] Creating LLM instance {
+  "agentType": "validator",
+  "model": "claude-sonnet-4-20250514"
+}
+[2025-12-27T10:14:54.559Z] [INFO] [llm-factory] Creating LLM instance {
+  "agentType": "synthesis",
+  "model": "claude-sonnet-4-20250514"
+}
+[2025-12-27T10:14:54.560Z] [INFO] [checkpointer-factory] Creating checkpointer {
+  "type": "memory"
+}
+[2025-12-27T10:14:54.560Z] [INFO] [checkpointer-factory] Using in-memory checkpointer
+╔════════════════════════════════════════════╗
+║       Research Assistant                   ║
+║  Type 'quit' to exit, 'new' for new thread ║
+╚════════════════════════════════════════════╝
+
+
+You: tell me about tesla
+[2025-12-27T10:14:58.635Z] [INFO] [clarity-agent] [correlation_id:8728d2c5-04d7-4083-9738-92563f4cac07] Clarity analysis started {
+  "query": "tell me about tesla",
+  "previousCompany": null,
+  "clarificationResponse": null,
+  "attempt": 0,
+  "correlation_id": "8728d2c5-04d7-4083-9738-92563f4cac07"
+}
+[2025-12-27T10:15:02.637Z] [INFO] [clarity-agent] [correlation_id:8728d2c5-04d7-4083-9738-92563f4cac07] LLM analysis complete {
+  "isClear": true,
+  "company": "Tesla",
+  "reasoning": "The user explicitly mentions \"Tesla\" in their query, which clearly refers to Tesla, Inc., the electric vehicle and clean energy company. The query is straightforward and doesn't require any clarification to proceed with company research.",
+  "correlation_id": "8728d2c5-04d7-4083-9738-92563f4cac07"
+}
+🔍 Analyzing query...
+[2025-12-27T10:15:02.641Z] [INFO] [research-agent] [correlation_id:8728d2c5-04d7-4083-9738-92563f4cac07] Research started {
+  "company": "Tesla, Inc.",
+  "attempt": 1,
+  "dataSource": "Tavily Search",
+  "hasFeedback": false,
+  "correlation_id": "8728d2c5-04d7-4083-9738-92563f4cac07"
+}
+[2025-12-27T10:15:02.641Z] [INFO] [tavily-source] Tavily search started {
+  "company": "Tesla, Inc.",
+  "query": "Tesla, Inc. company latest news stock price financial metrics key developments strategic initiatives",
+  "attempt": 1
+}
+[2025-12-27T10:15:08.224Z] [INFO] [tavily-source] Tavily search completed {
+  "company": "Tesla, Inc.",
+  "hasResult": true
+}
+[2025-12-27T10:15:14.060Z] [INFO] [research-agent] [correlation_id:8728d2c5-04d7-4083-9738-92563f4cac07] Research completed {
+  "company": "Tesla, Inc.",
+  "confidence": 10,
+  "hasFindings": true,
+  "source": "Tavily Search",
+  "correlation_id": "8728d2c5-04d7-4083-9738-92563f4cac07"
+}
+📚 Researching...
+[2025-12-27T10:15:14.065Z] [INFO] [synthesis-agent] [correlation_id:8728d2c5-04d7-4083-9738-92563f4cac07] Synthesis started {
+  "company": "Tesla, Inc.",
+  "confidence": 10,
+  "hasFindings": true,
+  "validationResult": "pending",
+  "correlation_id": "8728d2c5-04d7-4083-9738-92563f4cac07"
+}
+[2025-12-27T10:15:24.301Z] [INFO] [synthesis-agent] [correlation_id:8728d2c5-04d7-4083-9738-92563f4cac07] Synthesis complete {
+  "confidenceLevel": "high",
+  "summaryLength": 1912,
+  "correlation_id": "8728d2c5-04d7-4083-9738-92563f4cac07"
+}
+📝 Generating summary...
+
+Assistant:
+Based on the latest research findings, here's what you should know about Tesla:
+
+**Current Performance & Stock Position**
+Tesla's stock is currently trading around $391, having experienced significant volatility over the past year with a trading range between $214 and $488. Despite these swings, the stock has gained approximately 15% over the last 12 months. This volatility reflects the market's sensitivity to Tesla's production updates, interest rate changes, and news related to CEO Elon Musk.
+
+**Financial Outlook**
+For 2025, analysts are projecting Tesla's revenue to fall between $97-117 billion, with earnings per share around $1.14. The company expects to deliver between 1.95-2.08 million vehicles this year. The wide revenue range reflects uncertainty about how quickly Tesla's Full Self-Driving technology and energy storage business will scale versus potential slowdowns in their core automotive segment.
+
+**Strategic Expansion**
+Tesla is actively expanding globally and securing its supply chain. Key developments include opening their first showrooms in India (Mumbai and Delhi) in July 2025, targeting one of the world's fastest-growing automotive markets. Additionally, they announced a significant $1 billion joint venture with SRAM & MRAM Group to build battery gigafactories worldwide, ensuring stable battery supply for both vehicles and energy storage products.
+
+**Market Sentiment**
+Despite the volatility, analyst sentiment remains largely positive, with major firms like Deutsche Bank, Wedbush, and Piper Sandler maintaining "Buy" ratings with price targets ranging from $500-600, suggesting potential upside from current levels.
+
+Tesla continues to focus on expanding market presence while investing heavily in AI, robotics, and autonomous driving technology, though these investments are currently putting some pressure on profit margins due to increased competition in the EV space.
+
+You: what about their competitors
+[2025-12-27T10:16:06.508Z] [INFO] [clarity-agent] [correlation_id:149473d8-62d4-4e31-9313-addc6f30d557] Clarity analysis started {
+  "query": "what about their competitors",
+  "previousCompany": "Tesla, Inc.",
+  "clarificationResponse": null,
+  "attempt": 0,
+  "correlation_id": "149473d8-62d4-4e31-9313-addc6f30d557"
+}
+[2025-12-27T10:16:06.509Z] [INFO] [clarity-agent] [correlation_id:149473d8-62d4-4e31-9313-addc6f30d557] Follow-up detected, using existing company {
+  "company": "Tesla, Inc.",
+  "correlation_id": "149473d8-62d4-4e31-9313-addc6f30d557"
+}
+🔍 Analyzing query...
+[2025-12-27T10:16:06.510Z] [INFO] [research-agent] [correlation_id:149473d8-62d4-4e31-9313-addc6f30d557] Research started {
+  "company": "Tesla, Inc.",
+  "attempt": 1,
+  "dataSource": "Tavily Search",
+  "hasFeedback": false,
+  "correlation_id": "149473d8-62d4-4e31-9313-addc6f30d557"
+}
+[2025-12-27T10:16:06.510Z] [INFO] [tavily-source] Tavily search started {
+  "company": "Tesla, Inc.",
+  "query": "Tesla, Inc. company competitors competitive landscape market share latest news developments",
+  "attempt": 1
+}
+[2025-12-27T10:16:11.174Z] [INFO] [tavily-source] Tavily search completed {
+  "company": "Tesla, Inc.",
+  "hasResult": true
+}
+[2025-12-27T10:16:18.424Z] [INFO] [research-agent] [correlation_id:149473d8-62d4-4e31-9313-addc6f30d557] Research completed {
+  "company": "Tesla, Inc.",
+  "confidence": 10,
+  "hasFindings": true,
+  "source": "Tavily Search",
+  "correlation_id": "149473d8-62d4-4e31-9313-addc6f30d557"
+}
+📚 Researching...
+[2025-12-27T10:16:18.426Z] [INFO] [synthesis-agent] [correlation_id:149473d8-62d4-4e31-9313-addc6f30d557] Synthesis started {
+  "company": "Tesla, Inc.",
+  "confidence": 10,
+  "hasFindings": true,
+  "validationResult": "pending",
+  "correlation_id": "149473d8-62d4-4e31-9313-addc6f30d557"
+}
+[2025-12-27T10:16:29.440Z] [INFO] [synthesis-agent] [correlation_id:149473d8-62d4-4e31-9313-addc6f30d557] Synthesis complete {
+  "confidenceLevel": "high",
+  "summaryLength": 1836,
+  "correlation_id": "149473d8-62d4-4e31-9313-addc6f30d557"
+}
+📝 Generating summary...
+
+Assistant:
+Tesla faces intensifying competition across multiple fronts in the electric vehicle market. Here's what the competitive landscape looks like:
+
+**Market Position Changes**
+Tesla's dominance is clearly eroding, though it remains a major player. In the U.S., Tesla's market share has dropped significantly from 75% in early 2022 to 43.5% in Q1 2025. While still the largest EV seller in America, this decline shows how much the competitive environment has shifted.
+
+**Key Competitors by Region**
+
+*Traditional Automakers in the U.S.:*
+- Ford and GM are Tesla's primary challengers among established manufacturers
+- Hyundai Group (including Hyundai, Kia, and Genesis) sold nearly 23,000 battery electric vehicles in Q1 2025
+- Chevrolet and Honda are also gaining ground with competitive alternatives
+
+*Global Competition:*
+- **BYD** has emerged as Tesla's biggest global rival, actually surpassing Tesla as the world's largest EV manufacturer in 2024 with 4.0 million vehicles produced compared to Tesla's 1.8 million
+- This makes Tesla the second-largest EV manufacturer globally
+
+**Regional Challenges**
+Tesla's struggles vary by market. In Europe, the company has faced particularly steep declines, with market share dropping to just 7.2% by May 2025. Germany exemplifies this trend, where Tesla's sales plummeted 62.2% in Q1 2025.
+
+**The Competitive Threat**
+The research indicates Tesla now faces a two-pronged challenge: traditional automakers leveraging their manufacturing expertise and resources, plus new tech-focused companies (particularly Chinese manufacturers) that can compete on price while serving large domestic markets.
+
+Despite these challenges, Tesla's Model Y remains the best-selling battery electric vehicle globally, suggesting the company still has strong individual products even as overall market share declines.
+
+You: and what about their recent acquisitions?
+[2025-12-27T10:16:38.482Z] [INFO] [clarity-agent] [correlation_id:60f674c3-58f9-4fcb-a708-1f80dca7f689] Clarity analysis started {
+  "query": "and what about their recent acquisitions?",
+  "previousCompany": "Tesla, Inc.",
+  "clarificationResponse": null,
+  "attempt": 0,
+  "correlation_id": "60f674c3-58f9-4fcb-a708-1f80dca7f689"
+}
+[2025-12-27T10:16:38.482Z] [INFO] [clarity-agent] [correlation_id:60f674c3-58f9-4fcb-a708-1f80dca7f689] Follow-up detected, using existing company {
+  "company": "Tesla, Inc.",
+  "correlation_id": "60f674c3-58f9-4fcb-a708-1f80dca7f689"
+}
+🔍 Analyzing query...
+[2025-12-27T10:16:38.483Z] [INFO] [research-agent] [correlation_id:60f674c3-58f9-4fcb-a708-1f80dca7f689] Research started {
+  "company": "Tesla, Inc.",
+  "attempt": 1,
+  "dataSource": "Tavily Search",
+  "hasFeedback": false,
+  "correlation_id": "60f674c3-58f9-4fcb-a708-1f80dca7f689"
+}
+[2025-12-27T10:16:38.483Z] [INFO] [tavily-source] Tavily search started {
+  "company": "Tesla, Inc.",
+  "query": "Tesla, Inc. company acquisitions mergers M&A deals purchased companies latest news announcements updates latest news developments",
+  "attempt": 1
+}
+[2025-12-27T10:16:43.031Z] [INFO] [tavily-source] Tavily search completed {
+  "company": "Tesla, Inc.",
+  "hasResult": true
+}
+[2025-12-27T10:16:47.751Z] [INFO] [research-agent] [correlation_id:60f674c3-58f9-4fcb-a708-1f80dca7f689] Research completed {
+  "company": "Tesla, Inc.",
+  "confidence": 7,
+  "hasFindings": true,
+  "source": "Tavily Search",
+  "correlation_id": "60f674c3-58f9-4fcb-a708-1f80dca7f689"
+}
+📚 Researching...
+[2025-12-27T10:16:47.753Z] [INFO] [synthesis-agent] [correlation_id:60f674c3-58f9-4fcb-a708-1f80dca7f689] Synthesis started {
+  "company": "Tesla, Inc.",
+  "confidence": 7,
+  "hasFindings": true,
+  "validationResult": "pending",
+  "correlation_id": "60f674c3-58f9-4fcb-a708-1f80dca7f689"
+}
+[2025-12-27T10:16:57.552Z] [INFO] [synthesis-agent] [correlation_id:60f674c3-58f9-4fcb-a708-1f80dca7f689] Synthesis complete {
+  "confidenceLevel": "medium",
+  "summaryLength": 1866,
+  "correlation_id": "60f674c3-58f9-4fcb-a708-1f80dca7f689"
+}
+📝 Generating summary...
+
+Assistant:
+Based on the available research, Tesla has pursued a focused acquisition strategy with 12 total acquisitions spanning 7 sectors, primarily targeting companies that enhance their manufacturing capabilities and autonomous driving technology.
+
+**Recent Acquisition Activity:**
+
+Tesla's most recent acquisition announcement came in February 2025, when they agreed to acquire certain assets of the insolvent German high-tech auto parts manufacturer Manz AG. The purchase price was not disclosed, but this acquisition aligns with Tesla's ongoing strategy to automate their manufacturing processes.
+
+**Key Historical Acquisitions:**
+
+Tesla acquired Perbix Machine Co. Inc. in 2017, a company founded in 1976 that specialized in designing custom, highly automated manufacturing machinery for high-volume production. This acquisition was part of Tesla's broader effort to enhance factory automation.
+
+Another notable acquisition was Grohmann Engineering GmbH, a German company that helped Tesla automate its factories. However, this acquisition faced some challenges - the founder Mr. Grohmann was later removed due to disagreements with Elon Musk over how to handle Grohmann's existing customers, many of whom were German automotive competitors of Tesla.
+
+**Strategic Focus:**
+
+Tesla's acquisition strategy appears concentrated in two main areas:
+- **Energy Storage Technology** (4 acquisitions)
+- **Auto Brands** (3 acquisitions)
+
+The company has also made strategic moves to acquire talent and expertise in AI and autonomous driving systems, gaining "high-value personnel with exceptional expertise" in these critical areas.
+
+Overall, Tesla's M&A approach seems deliberately targeted at building internal capabilities rather than broad diversification, focusing on manufacturing automation and the technology needed for their electric vehicle and energy storage ambitions.

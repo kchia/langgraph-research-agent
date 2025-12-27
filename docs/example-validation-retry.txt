@@ -1,0 +1,111 @@
+houchia@MacBook-Pro-2 langgraph-research-assistant % npm start
+
+> research-assistant@1.0.0 start
+> tsx src/index.ts
+
+[2025-12-27T10:35:40.523Z] [INFO] [llm-factory] Creating LLM instance {
+  "agentType": "clarity",
+  "model": "claude-sonnet-4-20250514"
+}
+[2025-12-27T10:35:40.526Z] [INFO] [data-source-factory] Using Mock data source
+[2025-12-27T10:35:40.526Z] [INFO] [llm-factory] Creating LLM instance {
+  "agentType": "validator",
+  "model": "claude-sonnet-4-20250514"
+}
+[2025-12-27T10:35:40.526Z] [INFO] [llm-factory] Creating LLM instance {
+  "agentType": "synthesis",
+  "model": "claude-sonnet-4-20250514"
+}
+[2025-12-27T10:35:40.527Z] [INFO] [checkpointer-factory] Creating checkpointer {
+  "type": "memory"
+}
+[2025-12-27T10:35:40.527Z] [INFO] [checkpointer-factory] Using in-memory checkpointer
+╔════════════════════════════════════════════╗
+║       Research Assistant                   ║
+║  Type 'quit' to exit, 'new' for new thread ║
+╚════════════════════════════════════════════╝
+
+
+You: tell me about Apple
+[2025-12-27T10:35:51.051Z] [INFO] [clarity-agent] [correlation_id:eabfc465-1d6a-4b19-908b-ab9503e3914b] Clarity analysis started {
+  "query": "tell me about Apple",
+  "previousCompany": null,
+  "clarificationResponse": null,
+  "attempt": 0,
+  "correlation_id": "eabfc465-1d6a-4b19-908b-ab9503e3914b"
+}
+[2025-12-27T10:35:54.925Z] [INFO] [clarity-agent] [correlation_id:eabfc465-1d6a-4b19-908b-ab9503e3914b] LLM analysis complete {
+  "isClear": true,
+  "company": "Apple",
+  "reasoning": "The query clearly mentions \"Apple\" which refers to Apple Inc., the technology company. The request \"tell me about Apple\" is straightforward and provides enough context to proceed with company research.",
+  "correlation_id": "eabfc465-1d6a-4b19-908b-ab9503e3914b"
+}
+🔍 Analyzing query...
+[2025-12-27T10:35:54.929Z] [INFO] [research-agent] [correlation_id:eabfc465-1d6a-4b19-908b-ab9503e3914b] Research started {
+  "company": "Apple Inc.",
+  "attempt": 1,
+  "dataSource": "Mock Data Source",
+  "hasFeedback": false,
+  "correlation_id": "eabfc465-1d6a-4b19-908b-ab9503e3914b"
+}
+[2025-12-27T10:35:54.929Z] [INFO] [research-agent] [correlation_id:eabfc465-1d6a-4b19-908b-ab9503e3914b] Research completed {
+  "company": "Apple Inc.",
+  "confidence": 4,
+  "hasFindings": true,
+  "source": "Mock Data Source",
+  "correlation_id": "eabfc465-1d6a-4b19-908b-ab9503e3914b"
+}
+📚 Researching...
+[2025-12-27T10:35:54.931Z] [INFO] [validator-agent] [correlation_id:eabfc465-1d6a-4b19-908b-ab9503e3914b] Validation started {
+  "company": "Apple Inc.",
+  "confidence": 4,
+  "attempt": 1,
+  "correlation_id": "eabfc465-1d6a-4b19-908b-ab9503e3914b"
+}
+[2025-12-27T10:36:03.282Z] [INFO] [validator-agent] [correlation_id:eabfc465-1d6a-4b19-908b-ab9503e3914b] Validation complete {
+  "sufficient": false,
+  "reasoning": "The original query \"tell me about Apple\" is very broad and requires comprehensive coverage of the company. The findings only provide minimal recent news (Vision Pro launch, Q4 earnings) and explicitly state that stock information and key developments are \"not available.\" This leaves major gaps in fundamental company information, product portfolio, market position, leadership, and strategic direction. The low confidence score of 4/10 confirms that even the researcher acknowledges the response is insufficient for such a general inquiry about one of the world's largest companies.",
+  "correlation_id": "eabfc465-1d6a-4b19-908b-ab9503e3914b"
+}
+✅ Validating findings...
+[2025-12-27T10:36:03.285Z] [INFO] [research-agent] [correlation_id:eabfc465-1d6a-4b19-908b-ab9503e3914b] Research started {
+  "company": "Apple Inc.",
+  "attempt": 2,
+  "dataSource": "Mock Data Source",
+  "hasFeedback": true,
+  "correlation_id": "eabfc465-1d6a-4b19-908b-ab9503e3914b"
+}
+[2025-12-27T10:36:03.285Z] [INFO] [research-agent] [correlation_id:eabfc465-1d6a-4b19-908b-ab9503e3914b] Research completed {
+  "company": "Apple Inc.",
+  "confidence": 10,
+  "hasFindings": true,
+  "source": "Mock Data Source",
+  "correlation_id": "eabfc465-1d6a-4b19-908b-ab9503e3914b"
+}
+📚 Researching...
+[2025-12-27T10:36:03.287Z] [INFO] [synthesis-agent] [correlation_id:eabfc465-1d6a-4b19-908b-ab9503e3914b] Synthesis started {
+  "company": "Apple Inc.",
+  "confidence": 10,
+  "hasFindings": true,
+  "validationResult": "insufficient",
+  "correlation_id": "eabfc465-1d6a-4b19-908b-ab9503e3914b"
+}
+[2025-12-27T10:36:13.173Z] [INFO] [synthesis-agent] [correlation_id:eabfc465-1d6a-4b19-908b-ab9503e3914b] Synthesis complete {
+  "confidenceLevel": "high",
+  "summaryLength": 1622,
+  "correlation_id": "eabfc465-1d6a-4b19-908b-ab9503e3914b"
+}
+📝 Generating summary...
+
+Assistant:
+Based on recent research, Apple Inc. is performing exceptionally well across multiple fronts. The company has demonstrated strong financial health, with its most recent quarterly earnings surpassing expectations at $89.5 billion in revenue. Apple's stock (AAPL) is currently trading around $195, reflecting impressive growth of 45% year-to-date, which has helped maintain its massive $3.0 trillion market capitalization.
+
+Apple continues to innovate with significant product developments. The company recently launched its Vision Pro mixed-reality headset, marking its entry into spatial computing. Additionally, Apple has been integrating artificial intelligence throughout its product ecosystem through "Apple Intelligence," positioning itself competitively in the AI space. The rollout of their M3 chip family across their device lineup is now complete, offering enhanced performance and efficiency.
+
+A particularly notable trend is Apple's services division reaching an all-time high in revenue, which demonstrates the company's successful diversification beyond hardware sales. This services growth includes revenue from the App Store, iCloud, Apple Music, and other subscription offerings.
+
+From a valuation perspective, Apple trades at a price-to-earnings ratio of 31.2, which reflects investor confidence in the company's continued growth prospects, though it suggests the stock is priced at a premium relative to earnings.
+
+Overall, Apple appears to be in a strong position with solid financial performance, continued innovation in both hardware and services, and successful expansion into new product categories.
+
+You: 

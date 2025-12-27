@@ -1,0 +1,98 @@
+houchia@MacBook-Pro-2 langgraph-research-assistant % npm start
+
+> research-assistant@1.0.0 start
+> tsx src/index.ts
+
+[2025-12-27T10:43:55.765Z] [INFO] [llm-factory] Creating LLM instance {
+  "agentType": "clarity",
+  "model": "claude-sonnet-4-20250514"
+}
+[2025-12-27T10:43:55.768Z] [INFO] [data-source-factory] Using Tavily data source
+[2025-12-27T10:43:55.769Z] [INFO] [llm-factory] Creating LLM instance {
+  "agentType": "validator",
+  "model": "claude-sonnet-4-20250514"
+}
+[2025-12-27T10:43:55.769Z] [INFO] [llm-factory] Creating LLM instance {
+  "agentType": "synthesis",
+  "model": "claude-sonnet-4-20250514"
+}
+[2025-12-27T10:43:55.770Z] [INFO] [checkpointer-factory] Creating checkpointer {
+  "type": "memory"
+}
+[2025-12-27T10:43:55.770Z] [INFO] [checkpointer-factory] Using in-memory checkpointer
+╔════════════════════════════════════════════╗
+║       Research Assistant                   ║
+║  Type 'quit' to exit, 'new' for new thread ║
+╚════════════════════════════════════════════╝
+
+
+You: tell me about xyzabc
+[2025-12-27T10:44:04.710Z] [INFO] [clarity-agent] [correlation_id:3d2521cd-8b6a-4633-8375-03a0a35b3b24] Clarity analysis started {
+  "query": "tell me about xyzabc",
+  "previousCompany": null,
+  "clarificationResponse": null,
+  "attempt": 0,
+  "correlation_id": "3d2521cd-8b6a-4633-8375-03a0a35b3b24"
+}
+[2025-12-27T10:44:08.885Z] [INFO] [clarity-agent] [correlation_id:3d2521cd-8b6a-4633-8375-03a0a35b3b24] LLM analysis complete {
+  "isClear": false,
+  "company": "xyzabc",
+  "reasoning": "The query mentions \"xyzabc\" which appears to be random characters or gibberish rather than a legitimate company name. This falls under the criteria for obviously fake or nonsensical company names that should trigger a clarification request rather than proceeding with research.",
+  "correlation_id": "3d2521cd-8b6a-4633-8375-03a0a35b3b24"
+}
+🔍 Analyzing query...
+
+The company name "xyzabc" appears to be random characters or gibberish rather than a real company name. Could you please provide the actual name of the company you'd like to research?
+You: qwerty123
+⚙️ interrupt...
+[2025-12-27T10:44:19.599Z] [INFO] [clarity-agent] [correlation_id:3d2521cd-8b6a-4633-8375-03a0a35b3b24] Clarity analysis started {
+  "query": "tell me about xyzabc",
+  "previousCompany": null,
+  "clarificationResponse": "qwerty123",
+  "attempt": 1,
+  "correlation_id": "3d2521cd-8b6a-4633-8375-03a0a35b3b24"
+}
+[2025-12-27T10:44:24.671Z] [INFO] [clarity-agent] [correlation_id:3d2521cd-8b6a-4633-8375-03a0a35b3b24] LLM analysis complete {
+  "isClear": false,
+  "company": "xyzabc",
+  "reasoning": "The user mentioned \"xyzabc\" which appears to be random letters and not a recognizable company name. When asked for clarification, they provided \"qwerty123\" which is also clearly gibberish (common keyboard pattern + numbers). Both names are obviously fake or nonsensical, so I need to ask for a real company name to proceed with research.",
+  "correlation_id": "3d2521cd-8b6a-4633-8375-03a0a35b3b24"
+}
+[2025-12-27T10:44:24.671Z] [INFO] [clarity-agent] [correlation_id:3d2521cd-8b6a-4633-8375-03a0a35b3b24] No company detected after clarification attempt, proceeding gracefully {
+  "correlation_id": "3d2521cd-8b6a-4633-8375-03a0a35b3b24"
+}
+[2025-12-27T10:44:24.672Z] [WARN] [routers] Proceeding to research without detected company - may result in poor results
+🔍 Analyzing query...
+[2025-12-27T10:44:24.673Z] [INFO] [research-agent] [correlation_id:3d2521cd-8b6a-4633-8375-03a0a35b3b24] Research started {
+  "company": null,
+  "attempt": 1,
+  "dataSource": "Tavily Search",
+  "hasFeedback": false,
+  "correlation_id": "3d2521cd-8b6a-4633-8375-03a0a35b3b24"
+}
+[2025-12-27T10:44:24.673Z] [WARN] [research-agent] [correlation_id:3d2521cd-8b6a-4633-8375-03a0a35b3b24] No company detected, returning empty findings {
+  "correlation_id": "3d2521cd-8b6a-4633-8375-03a0a35b3b24"
+}
+[2025-12-27T10:44:24.674Z] [WARN] [routers] No research findings - routing to synthesis for fallback
+📚 Researching...
+[2025-12-27T10:44:24.675Z] [INFO] [synthesis-agent] [correlation_id:3d2521cd-8b6a-4633-8375-03a0a35b3b24] Synthesis started {
+  "company": null,
+  "confidence": 0,
+  "hasFindings": false,
+  "validationResult": "pending",
+  "correlation_id": "3d2521cd-8b6a-4633-8375-03a0a35b3b24"
+}
+📝 Generating summary...
+
+Assistant:
+I couldn't find specific information about "tell me about xyzabc".
+
+This might be because:
+- The company name wasn't recognized in my sources
+- Limited public data is available
+
+Would you like to:
+- Try a different spelling or the full company name?
+- Ask about a related company?
+
+You: 

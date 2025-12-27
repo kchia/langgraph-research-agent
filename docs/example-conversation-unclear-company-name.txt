@@ -1,0 +1,164 @@
+houchia@MacBook-Pro-2 langgraph-research-assistant % npm start
+
+> research-assistant@1.0.0 start
+> tsx src/index.ts
+
+[2025-12-27T10:17:56.676Z] [INFO] [llm-factory] Creating LLM instance {
+  "agentType": "clarity",
+  "model": "claude-sonnet-4-20250514"
+}
+[2025-12-27T10:17:56.679Z] [INFO] [data-source-factory] Using Tavily data source
+[2025-12-27T10:17:56.679Z] [INFO] [llm-factory] Creating LLM instance {
+  "agentType": "validator",
+  "model": "claude-sonnet-4-20250514"
+}
+[2025-12-27T10:17:56.680Z] [INFO] [llm-factory] Creating LLM instance {
+  "agentType": "synthesis",
+  "model": "claude-sonnet-4-20250514"
+}
+[2025-12-27T10:17:56.680Z] [INFO] [checkpointer-factory] Creating checkpointer {
+  "type": "memory"
+}
+[2025-12-27T10:17:56.680Z] [INFO] [checkpointer-factory] Using in-memory checkpointer
+╔════════════════════════════════════════════╗
+║       Research Assistant                   ║
+║  Type 'quit' to exit, 'new' for new thread ║
+╚════════════════════════════════════════════╝
+
+
+You: tell me about asdf
+[2025-12-27T10:17:59.947Z] [INFO] [clarity-agent] [correlation_id:51b68142-2029-4b19-acc0-cd66001c0a39] Clarity analysis started {
+  "query": "tell me about asdf",
+  "previousCompany": null,
+  "clarificationResponse": null,
+  "attempt": 0,
+  "correlation_id": "51b68142-2029-4b19-acc0-cd66001c0a39"
+}
+[2025-12-27T10:18:04.310Z] [INFO] [clarity-agent] [correlation_id:51b68142-2029-4b19-acc0-cd66001c0a39] LLM analysis complete {
+  "isClear": false,
+  "company": null,
+  "reasoning": "\"asdf\" appears to be random characters or placeholder text rather than a recognizable company name or stock ticker. There is no previous company context to reference. The query is too ambiguous to proceed with research.",
+  "correlation_id": "51b68142-2029-4b19-acc0-cd66001c0a39"
+}
+🔍 Analyzing query...
+
+The term "asdf" is unclear. Could you please specify which company you'd like to learn about? Please provide the full company name or stock ticker.
+You: basdf
+⚙️ interrupt...
+[2025-12-27T10:18:14.827Z] [INFO] [clarity-agent] [correlation_id:51b68142-2029-4b19-acc0-cd66001c0a39] Clarity analysis started {
+  "query": "tell me about asdf",
+  "previousCompany": null,
+  "clarificationResponse": "basdf",
+  "attempt": 1,
+  "correlation_id": "51b68142-2029-4b19-acc0-cd66001c0a39"
+}
+[2025-12-27T10:18:20.511Z] [INFO] [clarity-agent] [correlation_id:51b68142-2029-4b19-acc0-cd66001c0a39] LLM analysis complete {
+  "isClear": false,
+  "company": null,
+  "reasoning": "The query \"tell me about asdf\" contains \"asdf\" which is not a recognizable company name or ticker symbol. \"asdf\" is commonly used as placeholder text or random keystrokes. The user clarification \"basdf\" also appears to be random characters and doesn't provide any meaningful company information. There is no previous company context to fall back on. The query is unclear and requires clarification about which specific company the user wants information about.",
+  "correlation_id": "51b68142-2029-4b19-acc0-cd66001c0a39"
+}
+[2025-12-27T10:18:20.511Z] [INFO] [clarity-agent] [correlation_id:51b68142-2029-4b19-acc0-cd66001c0a39] No company detected after clarification attempt, proceeding gracefully {
+  "correlation_id": "51b68142-2029-4b19-acc0-cd66001c0a39"
+}
+[2025-12-27T10:18:20.512Z] [WARN] [routers] Proceeding to research without detected company - may result in poor results
+🔍 Analyzing query...
+[2025-12-27T10:18:20.513Z] [INFO] [research-agent] [correlation_id:51b68142-2029-4b19-acc0-cd66001c0a39] Research started {
+  "company": null,
+  "attempt": 1,
+  "dataSource": "Tavily Search",
+  "hasFeedback": false,
+  "correlation_id": "51b68142-2029-4b19-acc0-cd66001c0a39"
+}
+[2025-12-27T10:18:20.513Z] [WARN] [research-agent] [correlation_id:51b68142-2029-4b19-acc0-cd66001c0a39] No company detected, returning empty findings {
+  "correlation_id": "51b68142-2029-4b19-acc0-cd66001c0a39"
+}
+[2025-12-27T10:18:20.514Z] [WARN] [routers] No research findings - routing to synthesis for fallback
+📚 Researching...
+[2025-12-27T10:18:20.516Z] [INFO] [synthesis-agent] [correlation_id:51b68142-2029-4b19-acc0-cd66001c0a39] Synthesis started {
+  "company": null,
+  "confidence": 0,
+  "hasFindings": false,
+  "validationResult": "pending",
+  "correlation_id": "51b68142-2029-4b19-acc0-cd66001c0a39"
+}
+📝 Generating summary...
+
+Assistant:
+I couldn't find specific information about "tell me about asdf".
+
+This might be because:
+- The company name wasn't recognized in my sources
+- Limited public data is available
+
+Would you like to:
+- Try a different spelling or the full company name?
+- Ask about a related company?
+
+You: tell me about facebook
+[2025-12-27T10:18:56.559Z] [INFO] [clarity-agent] [correlation_id:c382a982-7a3c-4f19-afa4-7cfd0e6e4d30] Clarity analysis started {
+  "query": "tell me about facebook",
+  "previousCompany": null,
+  "clarificationResponse": null,
+  "attempt": 0,
+  "correlation_id": "c382a982-7a3c-4f19-afa4-7cfd0e6e4d30"
+}
+[2025-12-27T10:19:00.331Z] [INFO] [clarity-agent] [correlation_id:c382a982-7a3c-4f19-afa4-7cfd0e6e4d30] LLM analysis complete {
+  "isClear": true,
+  "company": "Facebook",
+  "reasoning": "The user explicitly mentions \"facebook\" in their query, which clearly identifies Meta Platforms Inc. (formerly Facebook Inc.) as the company they want information about. The query is straightforward and unambiguous.",
+  "correlation_id": "c382a982-7a3c-4f19-afa4-7cfd0e6e4d30"
+}
+🔍 Analyzing query...
+[2025-12-27T10:19:00.333Z] [INFO] [research-agent] [correlation_id:c382a982-7a3c-4f19-afa4-7cfd0e6e4d30] Research started {
+  "company": "Meta Platforms, Inc.",
+  "attempt": 1,
+  "dataSource": "Tavily Search",
+  "hasFeedback": false,
+  "correlation_id": "c382a982-7a3c-4f19-afa4-7cfd0e6e4d30"
+}
+[2025-12-27T10:19:00.334Z] [INFO] [tavily-source] Tavily search started {
+  "company": "Meta Platforms, Inc.",
+  "query": "Meta Platforms, Inc. company latest news stock price financial metrics key developments strategic initiatives",
+  "attempt": 1
+}
+[2025-12-27T10:19:05.865Z] [INFO] [tavily-source] Tavily search completed {
+  "company": "Meta Platforms, Inc.",
+  "hasResult": true
+}
+[2025-12-27T10:19:12.042Z] [INFO] [research-agent] [correlation_id:c382a982-7a3c-4f19-afa4-7cfd0e6e4d30] Research completed {
+  "company": "Meta Platforms, Inc.",
+  "confidence": 10,
+  "hasFindings": true,
+  "source": "Tavily Search",
+  "correlation_id": "c382a982-7a3c-4f19-afa4-7cfd0e6e4d30"
+}
+📚 Researching...
+[2025-12-27T10:19:12.045Z] [INFO] [synthesis-agent] [correlation_id:c382a982-7a3c-4f19-afa4-7cfd0e6e4d30] Synthesis started {
+  "company": "Meta Platforms, Inc.",
+  "confidence": 10,
+  "hasFindings": true,
+  "validationResult": "pending",
+  "correlation_id": "c382a982-7a3c-4f19-afa4-7cfd0e6e4d30"
+}
+[2025-12-27T10:19:22.179Z] [INFO] [synthesis-agent] [correlation_id:c382a982-7a3c-4f19-afa4-7cfd0e6e4d30] Synthesis complete {
+  "confidenceLevel": "high",
+  "summaryLength": 1919,
+  "correlation_id": "c382a982-7a3c-4f19-afa4-7cfd0e6e4d30"
+}
+📝 Generating summary...
+
+Assistant:
+Facebook, now officially known as Meta Platforms, Inc., has transformed into one of the world's most valuable technology companies with a current market capitalization of $1.67 trillion as of late 2025.
+
+**Current Performance:** Meta is experiencing exceptional financial growth, with a 26% revenue increase in Q3 2025. The company has shown remarkable profitability improvements through its "Year of Efficiency" initiatives, which have streamlined operations while maintaining strong growth momentum. Their expanding operating margins demonstrate successful cost management alongside revenue growth.
+
+**Core Business:** While still widely known for Facebook, Meta operates a comprehensive ecosystem of social media platforms and communication services. The company falls under the Communication Services sector, specifically focused on Internet Content & Information. As of December 31st, Meta employs 78,450 full-time employees.
+
+**AI Investment Focus:** Meta is making massive investments in artificial intelligence infrastructure, with planned capital expenditures of $60-65 billion for 2025. Approximately 70% of this investment targets AI infrastructure development. The company aims to achieve 2GW of compute capacity and deploy over 1.3 million GPUs across its data centers by year-end. These AI investments are already showing returns through improved advertising performance.
+
+**Market Position:** Analysts are optimistic about Meta's future, predicting revenue re-acceleration driven by AI-enhanced advertising capabilities. The company's stock has been trading in the $660-670 range recently, reflecting investor confidence in its strategic direction.
+
+**Challenges:** Meta continues to navigate complex regulatory environments, particularly with the European Commission's Digital Markets Act enforcement, though its integrated platform ecosystem provides both defensive advantages and growth opportunities.
+
+You: 
