@@ -161,7 +161,30 @@ export function createClarityAgent(llm?: BaseChatModel) {
         reasoning: response.reasoning
       });
 
-      // If company detected, proceed (regardless of is_clear flag)
+      // Check if query is clear first - respect the is_clear flag
+      if (!response.is_clear) {
+        // Query is unclear - ask for clarification even if company was detected
+        const clarificationQuestion =
+          response.clarification_needed ??
+          response.reasoning ??
+          "Could you please clarify which company you're asking about?";
+        const result = handleNoCompanyDetected(
+          logger,
+          state.clarificationAttempts,
+          clarificationQuestion,
+          "info"
+        );
+        // Include conversation summary if created
+        if (conversationSummary) {
+          return {
+            ...result,
+            conversationSummary
+          };
+        }
+        return result;
+      }
+
+      // Query is clear - check if company was detected
       if (response.detected_company) {
         const normalizedCompany = normalizeCompanyName(
           response.detected_company
@@ -178,7 +201,7 @@ export function createClarityAgent(llm?: BaseChatModel) {
         }
         return result;
       } else {
-        // No company detected - use helper for proceed/clarify decision
+        // Query is clear but no company detected - use helper for proceed/clarify decision
         const result = handleNoCompanyDetected(
           logger,
           state.clarificationAttempts,
