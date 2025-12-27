@@ -230,6 +230,3 @@ export class TokenBudget {
     return selected;
   }
 }
-
-// Default budget for conversation context
-export const conversationBudget = new TokenBudget(100000);

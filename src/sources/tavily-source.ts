@@ -67,6 +67,22 @@ const TOPIC_KEYWORDS = {
     "founder",
     "founders"
   ],
+  acquisitions: [
+    "acquisition",
+    "acquisitions",
+    "merger",
+    "mergers",
+    "M&A",
+    "M and A",
+    "buy",
+    "bought",
+    "purchase",
+    "purchased",
+    "acquired",
+    "acquire",
+    "takeover",
+    "takeovers"
+  ],
   news: ["news", "announcement", "announcements", "update", "updates", "recent"]
 };
 
@@ -107,6 +123,7 @@ function buildTopicQueryTerms(topics: string[]): string {
     financial: "stock price trading financial metrics revenue earnings",
     products: "products services offerings",
     leadership: "executives leadership management",
+    acquisitions: "acquisitions mergers M&A deals purchased companies",
     news: "latest news announcements updates"
   };
 

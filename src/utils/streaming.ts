@@ -12,11 +12,6 @@ import { executeWithTimeout } from "./timeout.js";
 
 const logger = new Logger("streaming");
 
-export interface StreamUpdate {
-  node: string;
-  data: Record<string, unknown>;
-}
-
 export interface StreamResult {
   result: Record<string, unknown>;
   interrupted: boolean;
