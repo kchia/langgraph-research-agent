@@ -32,7 +32,9 @@ export function buildClarityUserPrompt(
 
   // Build clarification section if response exists
   const clarificationSection = clarificationResponse
-    ? `\nUser clarification to previous question:\n${escapeForPrompt(clarificationResponse)}`
+    ? `\nUser clarification to previous question:\n${escapeForPrompt(
+        clarificationResponse
+      )}`
     : "";
 
   return `Previous company context: ${previousCompany ?? "None"}

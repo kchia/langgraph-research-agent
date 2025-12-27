@@ -19,8 +19,6 @@ import {
 import { normalizeCompanyName } from "../sources/company-normalization.js";
 import { AgentNames } from "../graph/routes.js";
 
-// Logger is created per-request with correlation ID from state
-
 // Schema for structured LLM output
 const ClarityOutputSchema = z.object({
   is_clear: z.boolean(),
@@ -30,13 +28,6 @@ const ClarityOutputSchema = z.object({
 });
 
 type ClarityOutput = z.infer<typeof ClarityOutputSchema>;
-
-/**
- * Normalize company name to full form for consistency.
- * Maps common company name variations to their canonical forms.
- */
-// Company normalization is now handled by the configurable module
-// See src/data/company-normalization.ts
 
 /**
  * Factory function to create Clarity Agent with injectable LLM.
@@ -130,7 +121,16 @@ export function createClarityAgent(llm?: BaseChatModel) {
       let conversationSummary = state.conversationSummary;
       if (!conversationSummary && state.messages.length > 10) {
         // Only attempt summarization if we have many messages and no summary yet
-        conversationSummary = await summarizeMessages(state.messages);
+        try {
+          conversationSummary = await summarizeMessages(state.messages);
+        } catch (error) {
+          logger.warn(
+            "Message summarization failed, continuing without summary",
+            {
+              error: error instanceof Error ? error.message : String(error)
+            }
+          );
+        }
       }
 
       // Build conversation context using summary if available
