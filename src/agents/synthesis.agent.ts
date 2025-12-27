@@ -1,12 +1,12 @@
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { AIMessage } from "@langchain/core/messages";
 import type { ResearchState } from "../graph/state.js";
-import { MAX_RESEARCH_ATTEMPTS } from "../utils/constants.js";
+import { MAX_RESEARCH_ATTEMPTS, TOKEN_BUDGETS } from "../utils/constants.js";
 import {
   SYNTHESIS_SYSTEM_PROMPT,
   buildSynthesisUserPrompt
 } from "../prompts/synthesis.prompts.js";
-import { Logger, createLoggerWithCorrelationId } from "../utils/logger.js";
+import { createLoggerWithCorrelationId } from "../utils/logger.js";
 import { getLLM } from "../utils/llm-factory.js";
 import { TokenBudget } from "../utils/token-budget.js";
 
@@ -49,7 +49,7 @@ export function createSynthesisAgent(llm?: BaseChatModel) {
     // Apply token budget to findings if they're too long
     // Reserve tokens for system prompt, query, and response
     const budget = new TokenBudget();
-    const maxFindingsTokens = 8000; // Synthesis can handle more tokens
+    const maxFindingsTokens = TOKEN_BUDGETS.synthesis.findings;
     const findingsTokens = budget.estimateTokens(findingsText);
 
     if (findingsTokens > maxFindingsTokens) {

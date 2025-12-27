@@ -6,9 +6,10 @@ import {
   VALIDATOR_SYSTEM_PROMPT,
   buildValidatorUserPrompt
 } from "../prompts/validator.prompts.js";
-import { Logger, createLoggerWithCorrelationId } from "../utils/logger.js";
+import { createLoggerWithCorrelationId } from "../utils/logger.js";
 import { getLLM, supportsStructuredOutput } from "../utils/llm-factory.js";
 import { TokenBudget } from "../utils/token-budget.js";
+import { TOKEN_BUDGETS } from "../utils/constants.js";
 
 const ValidatorOutputSchema = z.object({
   is_sufficient: z.boolean(),
@@ -70,7 +71,7 @@ export function createValidatorAgent(llm?: BaseChatModel) {
     // Apply token budget to findings if they're too long
     // Reserve tokens for system prompt, query, and response structure
     const budget = new TokenBudget();
-    const maxFindingsTokens = 6000; // Leave room for prompt and response
+    const maxFindingsTokens = TOKEN_BUDGETS.validator.findings;
     const findingsTokens = budget.estimateTokens(findingsText);
 
     if (findingsTokens > maxFindingsTokens) {
