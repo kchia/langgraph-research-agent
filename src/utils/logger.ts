@@ -1,4 +1,4 @@
-type LogLevel = "debug" | "info" | "warn" | "error";
+export type LogLevel = "debug" | "info" | "warn" | "error";
 
 const LOG_LEVELS: Record<LogLevel, number> = {
   debug: 0,
@@ -8,6 +8,58 @@ const LOG_LEVELS: Record<LogLevel, number> = {
 };
 
 /**
+ * Interface for log transports.
+ * Implement this to customize where logs are sent (console, file, cloud service).
+ */
+export interface LogTransport {
+  /**
+   * Write a log entry.
+   *
+   * @param level - Log severity level
+   * @param context - Logger context (e.g., "clarity-agent")
+   * @param message - Log message
+   * @param data - Optional structured data
+   * @param correlationId - Optional correlation ID for request tracing
+   */
+  log(
+    level: LogLevel,
+    context: string,
+    message: string,
+    data?: Record<string, unknown>,
+    correlationId?: string
+  ): void;
+}
+
+/**
+ * Default console transport.
+ * Outputs logs to console with timestamp, level, and context.
+ */
+class ConsoleTransport implements LogTransport {
+  log(
+    level: LogLevel,
+    context: string,
+    message: string,
+    data?: Record<string, unknown>,
+    correlationId?: string
+  ): void {
+    const timestamp = new Date().toISOString();
+    const correlationPart = correlationId
+      ? ` [correlation_id:${correlationId}]`
+      : "";
+    const prefix = `[${timestamp}] [${level.toUpperCase()}] [${context}]${correlationPart}`;
+
+    if (data && Object.keys(data).length > 0) {
+      console.log(prefix, message, JSON.stringify(data, null, 2));
+    } else {
+      console.log(prefix, message);
+    }
+  }
+}
+
+// Default transport instance
+const defaultTransport = new ConsoleTransport();
+
+/**
  * Generate a unique correlation ID for request tracking.
  * Uses crypto.randomUUID for guaranteed uniqueness and cryptographic security.
  */
@@ -15,23 +67,16 @@ export function generateCorrelationId(): string {
   return crypto.randomUUID();
 }
 
-/**
- * Get correlation ID from graph config or generate a new one.
- */
-export function getCorrelationId(config?: {
-  configurable?: { correlation_id?: string };
-}): string | undefined {
-  return config?.configurable?.correlation_id;
-}
-
 export class Logger {
   private context: string;
   private minLevel: number;
   private correlationId?: string;
+  private transport: LogTransport;
 
-  constructor(context: string, correlationId?: string) {
+  constructor(context: string, correlationId?: string, transport?: LogTransport) {
     this.context = context;
     this.correlationId = correlationId;
+    this.transport = transport ?? defaultTransport;
     const envLevel = (process.env.LOG_LEVEL ?? "info") as LogLevel;
     this.minLevel = LOG_LEVELS[envLevel] ?? LOG_LEVELS.info;
   }
@@ -51,24 +96,12 @@ export class Logger {
   ) {
     if (LOG_LEVELS[level] < this.minLevel) return;
 
-    const timestamp = new Date().toISOString();
-    const correlationPart = this.correlationId
-      ? ` [correlation_id:${this.correlationId}]`
-      : "";
-    const prefix = `[${timestamp}] [${level.toUpperCase()}] [${
-      this.context
-    }]${correlationPart}`;
-
     // Include correlation ID in structured data if provided
     const logData = this.correlationId
       ? { ...data, correlation_id: this.correlationId }
       : data;
 
-    if (logData) {
-      console.log(prefix, message, JSON.stringify(logData, null, 2));
-    } else {
-      console.log(prefix, message);
-    }
+    this.transport.log(level, this.context, message, logData, this.correlationId);
   }
 
   debug(message: string, data?: Record<string, unknown>) {
@@ -103,3 +136,23 @@ export function createLoggerWithCorrelationId(
 ): Logger {
   return new Logger(context, correlationId ?? undefined);
 }
+
+/**
+ * Create a logger with a custom transport.
+ * Use this for production logging to services like CloudWatch, Datadog, etc.
+ *
+ * @param context - Logger context (e.g., "clarity-agent")
+ * @param correlationId - Optional correlation ID
+ * @param transport - Custom log transport implementation
+ * @returns Logger instance with custom transport
+ */
+export function createLoggerWithTransport(
+  context: string,
+  correlationId: string | null,
+  transport: LogTransport
+): Logger {
+  return new Logger(context, correlationId ?? undefined, transport);
+}
+
+// Export ConsoleTransport for extension
+export { ConsoleTransport };
