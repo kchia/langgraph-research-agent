@@ -84,7 +84,7 @@ export function createValidatorAgent(llm?: BaseChatModel) {
     }
 
     try {
-      const response = (await structuredModel.invoke([
+      const rawResponse = await structuredModel.invoke([
         { role: "system", content: VALIDATOR_SYSTEM_PROMPT },
         {
           role: "user",
@@ -94,7 +94,8 @@ export function createValidatorAgent(llm?: BaseChatModel) {
             state.confidenceScore
           )
         }
-      ])) as ValidatorOutput;
+      ]);
+      const response = ValidatorOutputSchema.parse(rawResponse);
 
       logger.info("Validation complete", {
         sufficient: response.is_sufficient,

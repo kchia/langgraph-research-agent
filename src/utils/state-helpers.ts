@@ -30,7 +30,7 @@ import { generateCorrelationId } from "./logger.js";
  * - `messages`: Appended to via reducer (conversation history)
  * - `conversationSummary`: Preserved (summarized older messages)
  * - `detectedCompany`: Preserved (Clarity Agent decides when to update)
- * - `errorContext`: Preserved until cleared by error-recovery agent
+ * - `errorContext`: Reset to null (cleared for fresh query)
  *
  * ### Special Case: detectedCompany
  * The `detectedCompany` field is intentionally NOT reset here. The Clarity Agent
@@ -68,6 +68,9 @@ export function createNewQueryInput(query: string): Partial<ResearchState> {
 
     // NOTE: detectedCompany is NOT reset here
     // Clarity Agent decides whether to update or preserve it
+
+    // Clear any previous error context for fresh query
+    errorContext: null,
 
     // Observability: Generate correlation ID for new query
     // This persists across the query execution for request tracking

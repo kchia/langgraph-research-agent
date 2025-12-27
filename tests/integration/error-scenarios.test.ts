@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => {
   const mockClarityResponse = {
     is_clear: true,
     detected_company: "Apple Inc.",
-    clarification_question: null,
+    clarification_needed: null,
     reasoning: "Query mentions Apple, a well-known company"
   };
 

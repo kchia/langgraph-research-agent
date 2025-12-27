@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => {
   const mockClarityResponse = {
     is_clear: true,
     detected_company: "Apple Inc.",
-    clarification_question: null,
+    clarification_needed: null,
     reasoning: "Query mentions Apple, a well-known company"
   };
 
@@ -125,7 +125,7 @@ describe("Full Workflow Integration", () => {
       const mockNeedsClarification = {
         is_clear: false,
         detected_company: null,
-        clarification_question: "Which company would you like to know about?",
+        clarification_needed: "Which company would you like to know about?",
         reasoning: "Query is ambiguous"
       };
       mocks.clarityLLM._invoke
@@ -183,7 +183,7 @@ describe("Full Workflow Integration", () => {
       const mockTeslaClarityResponse = {
         is_clear: true,
         detected_company: "Tesla, Inc.",
-        clarification_question: null,
+        clarification_needed: null,
         reasoning: "Query mentions Tesla"
       };
 
@@ -274,7 +274,7 @@ describe("Full Workflow Integration", () => {
       const mockTeslaClarity = {
         is_clear: true,
         detected_company: "Tesla, Inc.",
-        clarification_question: null,
+        clarification_needed: null,
         reasoning: "Mentions Tesla"
       };
       const mockTeslaResult = {
@@ -305,7 +305,7 @@ describe("Full Workflow Integration", () => {
       mocks.clarityLLM._invoke.mockResolvedValue({
         is_clear: true,
         detected_company: "XyzCorp",
-        clarification_question: null,
+        clarification_needed: null,
         reasoning: "User asked about XyzCorp"
       });
       mocks.dataSource._search.mockResolvedValue({
@@ -336,7 +336,7 @@ describe("Full Workflow Integration", () => {
       const mockTeslaClarity = {
         is_clear: true,
         detected_company: "Tesla, Inc.",
-        clarification_question: null,
+        clarification_needed: null,
         reasoning: "Mentions Tesla"
       };
       mocks.clarityLLM._invoke.mockResolvedValue(mockTeslaClarity);

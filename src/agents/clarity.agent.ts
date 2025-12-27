@@ -140,7 +140,7 @@ export function createClarityAgent(llm?: BaseChatModel) {
         TOKEN_BUDGETS.clarity.context
       );
 
-      const response = (await structuredModel.invoke([
+      const rawResponse = await structuredModel.invoke([
         { role: "system", content: CLARITY_SYSTEM_PROMPT },
         {
           role: "user",
@@ -151,7 +151,8 @@ export function createClarityAgent(llm?: BaseChatModel) {
             state.clarificationResponse
           )
         }
-      ])) as ClarityOutput;
+      ]);
+      const response = ClarityOutputSchema.parse(rawResponse);
 
       logger.info("LLM analysis complete", {
         isClear: response.is_clear,

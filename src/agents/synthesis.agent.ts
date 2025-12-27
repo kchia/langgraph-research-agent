@@ -75,7 +75,7 @@ export function createSynthesisAgent(llm?: BaseChatModel) {
           role: "user",
           content: buildSynthesisUserPrompt(
             state.originalQuery,
-            state.researchFindings.company,
+            state.researchFindings?.company ?? state.detectedCompany ?? "Unknown",
             findingsText,
             confidenceLevel
           )
