@@ -1,4 +1,4 @@
-# Research Assistant Graph
+### Research Assistant Graph
 
 ```mermaid
 %%{init: {'flowchart': {'curve': 'linear'}}}%%

@@ -31,6 +31,12 @@ cp .env.example .env
 npm start
 ```
 
+## CLI Commands
+
+- Type your query and press Enter
+- Type `quit` to exit
+- Type `new` to start a new conversation thread
+
 ## Env Configuration
 
 | Variable                   | Required   | Default              | Description                             |
@@ -75,16 +81,7 @@ src/
 
 The workflow follows this structure:
 
-```
-START -> clarity -> [interrupt OR research OR error-recovery]
-                         |
-         interrupt -> clarity (loop back)
-         research -> [validator OR synthesis OR error-recovery]
-                         |
-         validator -> [research (retry) OR synthesis OR error-recovery]
-         synthesis -> END
-         error-recovery -> END
-```
+![Research Assistant Graph](./docs/GRAPH-DIAGRAM.md)
 
 ## Assumptions
 
@@ -205,19 +202,3 @@ This implementation exceeds the base requirements with the following additions:
 - **RAG Integration**: Vector store for company filings, earnings calls, news archives
 - **Agent Specialization**: Dedicated agents for financials, products, leadership, competitors
 - **Streaming Responses**: Token-by-token output for better UX on long syntheses
-
-## Troubleshooting
-
-| Issue                           | Solution                                               |
-| ------------------------------- | ------------------------------------------------------ |
-| `ANTHROPIC_API_KEY is required` | Set API key in `.env` file                             |
-| `Rate limit exceeded`           | Wait and retry; system has exponential backoff         |
-| `Graph execution timeout`       | Increase `GRAPH_TIMEOUT_MS` or check network           |
-| `No research findings`          | Verify company name spelling; try Tavily for real data |
-| `Checkpointer error`            | Ensure SQLite path is writable if using `sqlite`       |
-
-## CLI Commands
-
-- Type your query and press Enter
-- Type `quit` to exit
-- Type `new` to start a new conversation thread
