@@ -20,15 +20,31 @@ A multi-agent research assistant built with LangGraph TypeScript.
 
 ## Quick Start
 
+### 1. Install dependencies
 ```bash
-# Install dependencies
 npm install
+```
 
-# Configure (copy and edit)
+### 2. Configure environment
+```bash
 cp .env.example .env
+```
 
-# Run
+Then edit `.env` and add your API keys:
+```
+ANTHROPIC_API_KEY=sk-ant-...
+TAVILY_API_KEY=tvly-...
+```
+
+### 3. Run the application
+```bash
 npm start
+```
+
+### 4. Try a query
+Once running, type a company research query:
+```
+> What does Tesla do?
 ```
 
 ## CLI Commands
